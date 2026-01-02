@@ -87,13 +87,34 @@ jobs:
         if: steps.filter.outputs.skip == 'false'
         run: wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }}
 
-      # Upload artifact
-      - name: Upload Artifact
-        if: steps.filter.outputs.skip == 'false'
+      # Package macOS .app to zip
+      - name: Package macOS App
+        if: steps.filter.outputs.skip == 'false' && startsWith(matrix.os, 'macos')
+        run: |
+          cd build/bin
+          # Wails creates .app bundle, zip it for distribution
+          if [ -d "*.app" ] || [ -d "${{ matrix.output }}.app" ]; then
+            zip -r ${{ matrix.output }}.zip *.app
+          elif [ -d "SurfManager.app" ]; then
+            mv SurfManager.app ${{ matrix.output }}.app
+            zip -r ${{ matrix.output }}.zip ${{ matrix.output }}.app
+          fi
+
+      # Upload artifact - Windows/Linux
+      - name: Upload Artifact (Windows/Linux)
+        if: steps.filter.outputs.skip == 'false' && !startsWith(matrix.os, 'macos')
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
           path: build/bin/${{ matrix.output }}*
+
+      # Upload artifact - macOS
+      - name: Upload Artifact (macOS)
+        if: steps.filter.outputs.skip == 'false' && startsWith(matrix.os, 'macos')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output }}
+          path: build/bin/${{ matrix.output }}.zip
 
   release:
     needs: build
