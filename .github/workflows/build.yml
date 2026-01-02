@@ -27,7 +27,7 @@ jobs:
             platform: windows/amd64
             output: SurfManager-windows-amd64.exe
             name: windows-amd64
-          - os: ubuntu-20.04
+          - os: ubuntu-latest
             platform: linux/amd64
             output: SurfManager-linux-amd64
             name: linux-amd64
@@ -82,11 +82,17 @@ jobs:
         if: steps.filter.outputs.skip == 'false' && startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Build
         if: steps.filter.outputs.skip == 'false'
-        run: wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }}
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == ubuntu-* ]]; then
+            wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }} -tags webkit2_41
+          else
+            wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }}
+          fi
 
       - name: Package macOS App
         if: steps.filter.outputs.skip == 'false' && startsWith(matrix.os, 'macos')
