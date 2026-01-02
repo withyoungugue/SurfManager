@@ -27,7 +27,7 @@ jobs:
             platform: windows/amd64
             output: SurfManager-windows-amd64.exe
             name: windows-amd64
-          - os: ubuntu-latest
+          - os: ubuntu-20.04
             platform: linux/amd64
             output: SurfManager-linux-amd64
             name: linux-amd64
@@ -75,12 +75,12 @@ jobs:
         if: steps.filter.outputs.skip == 'false'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      # Linux dependencies
+      # Linux dependencies (Wails v2 requires webkit2gtk-4.0, only available on Ubuntu 20.04)
       - name: Install Linux Dependencies
-        if: steps.filter.outputs.skip == 'false' && matrix.os == 'ubuntu-latest'
+        if: steps.filter.outputs.skip == 'false' && startsWith(matrix.os, 'ubuntu')
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
       # Build
       - name: Build
