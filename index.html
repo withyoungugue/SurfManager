@@ -470,12 +470,15 @@
                 </div>
             </div>
             <div class="border-t border-dark-600 pt-6 text-center text-sm text-gray-600">
-                <p>Copyright 2025 risunCode. Open Source under MIT License.</p>
+                <p>Copyright <span id="year"></span> risunCode. Open Source under MIT License.</p>
             </div>
         </div>
     </footer>
 
     <script>
+        // Set current year
+        document.getElementById('year').textContent = new Date().getFullYear();
+
         // Mobile menu toggle
         document.getElementById('menu-btn').addEventListener('click', () => {
             document.getElementById('mobile-menu').classList.toggle('hidden');

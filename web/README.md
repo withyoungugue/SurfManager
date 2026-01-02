@@ -145,6 +145,6 @@ MIT License - Same as main project
 
 ---
 
-**Version**: 5.1.2  
+**Version**: 2.0.0
 **Author**: risunCode  
-**Last Updated**: November 2025
+**Last Updated**: January 2026
