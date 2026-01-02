@@ -367,51 +367,59 @@ func (m *Manager) RestoreBackup(appKey, sessionName string, targetPath string, a
 		return fmt.Errorf("backup not found: %s", sessionName)
 	}
 
-	if progressCb != nil {
-		progressCb(BackupProgress{Percent: 10, Message: "Removing existing data..."})
-	}
-
-	// Remove existing data in target path
-	if err := m.clearTargetPath(targetPath); err != nil {
-		return fmt.Errorf("failed to clear target path: %w", err)
-	}
-
-	if progressCb != nil {
-		progressCb(BackupProgress{Percent: 30, Message: "Restoring data..."})
-	}
-
-	// Copy backup data to target
+	// Check if there are any backup items (excluding _addons)
 	entries, err := os.ReadDir(backupFolder)
 	if err != nil {
 		return fmt.Errorf("failed to read backup folder: %w", err)
 	}
 
-	// Filter out _addons directory
+	// Filter out _addons directory and metadata files
 	var items []os.DirEntry
 	for _, entry := range entries {
-		if entry.Name() != "_addons" {
+		if entry.Name() != "_addons" && !strings.HasPrefix(entry.Name(), ".") {
 			items = append(items, entry)
 		}
 	}
 
-	totalItems := len(items)
-	for i, entry := range items {
-		src := filepath.Join(backupFolder, entry.Name())
-		dst := filepath.Join(targetPath, entry.Name())
+	// Only clear and restore targetPath if there are backup items
+	// This prevents clearing AppData when only addon_paths (like .aws) are configured
+	if len(items) > 0 {
+		if progressCb != nil {
+			progressCb(BackupProgress{Percent: 10, Message: "Removing existing data..."})
+		}
 
-		if entry.IsDir() {
-			if err := copyDir(src, dst); err != nil {
-				return fmt.Errorf("failed to restore directory %s: %w", entry.Name(), err)
-			}
-		} else {
-			if err := copyFile(src, dst); err != nil {
-				return fmt.Errorf("failed to restore file %s: %w", entry.Name(), err)
-			}
+		// Remove existing data in target path
+		if err := m.clearTargetPath(targetPath); err != nil {
+			return fmt.Errorf("failed to clear target path: %w", err)
 		}
 
 		if progressCb != nil {
-			progress := 30 + int(float64(i+1)/float64(totalItems)*50)
-			progressCb(BackupProgress{Percent: progress, Message: fmt.Sprintf("Restoring %s...", entry.Name())})
+			progressCb(BackupProgress{Percent: 30, Message: "Restoring data..."})
+		}
+
+		totalItems := len(items)
+		for i, entry := range items {
+			src := filepath.Join(backupFolder, entry.Name())
+			dst := filepath.Join(targetPath, entry.Name())
+
+			if entry.IsDir() {
+				if err := copyDir(src, dst); err != nil {
+					return fmt.Errorf("failed to restore directory %s: %w", entry.Name(), err)
+				}
+			} else {
+				if err := copyFile(src, dst); err != nil {
+					return fmt.Errorf("failed to restore file %s: %w", entry.Name(), err)
+				}
+			}
+
+			if progressCb != nil {
+				progress := 30 + int(float64(i+1)/float64(totalItems)*50)
+				progressCb(BackupProgress{Percent: progress, Message: fmt.Sprintf("Restoring %s...", entry.Name())})
+			}
+		}
+	} else {
+		if progressCb != nil {
+			progressCb(BackupProgress{Percent: 50, Message: "No main data to restore, processing addons..."})
 		}
 	}
 
@@ -479,13 +487,18 @@ func (m *Manager) restoreAddons(backupFolder string, addonPaths []string, progre
 			continue
 		}
 
-		// Remove existing addon
+		// Remove existing addon - don't wait if it fails, just continue
 		if _, err := os.Stat(addonPath); err == nil {
-			os.RemoveAll(addonPath)
+			// Try to remove, but don't block on errors (file might not be locked)
+			if err := os.RemoveAll(addonPath); err != nil {
+				// Log but continue - the copy might still work or partially work
+				fmt.Printf("Warning: Could not fully remove %s: %v (continuing anyway)\n", addonPath, err)
+			}
 		}
 
 		// Ensure parent directory exists
 		if err := os.MkdirAll(filepath.Dir(addonPath), 0755); err != nil {
+			fmt.Printf("Warning: Could not create parent dir for %s: %v\n", addonPath, err)
 			continue
 		}
 
@@ -496,10 +509,12 @@ func (m *Manager) restoreAddons(backupFolder string, addonPaths []string, progre
 
 		if info.IsDir() {
 			if err := copyDir(addonSrc, addonPath); err != nil {
+				fmt.Printf("Warning: Could not restore addon %s: %v\n", addonName, err)
 				continue
 			}
 		} else {
 			if err := copyFile(addonSrc, addonPath); err != nil {
+				fmt.Printf("Warning: Could not restore addon file %s: %v\n", addonName, err)
 				continue
 			}
 		}

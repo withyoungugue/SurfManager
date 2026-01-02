@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { Plus, Trash2, FolderOpen, RefreshCw, X, Check, FileJson, ToggleLeft, Edit } from 'lucide-svelte';
-  import { GetApps, CheckAppInstalled, SaveApp, DeleteApp, ToggleApp, OpenConfigFolder, SelectFile, SelectFolder, SelectFolderFromHome, SelectExeFromLocalPrograms, SelectFolderFromRoaming, OpenFolder } from '../../wailsjs/go/main/App.js';
+  import { GetApps, CheckAppInstalled, SaveApp, DeleteApp, ToggleApp, OpenConfigFolder, SelectFile, SelectFolder, SelectFolderFromHome, SelectExeFromLocalPrograms, SelectFolderFromRoaming, OpenFolder, GetApp } from '../../wailsjs/go/main/App.js';
   import { confirm } from './ConfirmModal.svelte';
   import { settings } from './stores/settings.js';
 
@@ -13,6 +13,10 @@
   
   // Context menu state
   let contextMenu = { show: false, x: 0, y: 0, app: null };
+  
+  // Dialog mode: 'add' or 'edit'
+  let dialogMode = 'add';
+  let editingAppKey = null;
   
   // New app form
   let newApp = {
@@ -144,10 +148,13 @@
       const path = await SelectExeFromLocalPrograms('Select Executable');
       if (path) {
         newApp.exe_path = path;
-        const fileName = path.split(/[/\\]/).pop();
-        const appName = fileName.replace('.exe', '');
-        newApp.app_name = appName.toLowerCase();
-        newApp.display_name = appName.charAt(0).toUpperCase() + appName.slice(1);
+        // Only auto-fill app_name and display_name in add mode
+        if (dialogMode === 'add') {
+          const fileName = path.split(/[/\\]/).pop();
+          const appName = fileName.replace('.exe', '');
+          newApp.app_name = appName.toLowerCase();
+          newApp.display_name = appName.charAt(0).toUpperCase() + appName.slice(1);
+        }
       }
     } catch (e) {
       log(`Error: ${e}`);
@@ -186,9 +193,75 @@
       // Reset to preset items
       newApp.backup_items = vscodePresetItems.map(item => ({ ...item }));
     } else {
-      // Clear for custom
+      // Custom: clear all items, nothing selected by default
       newApp.backup_items = [];
     }
+  }
+
+  // Open dialog for editing an existing app
+  async function openEditDialog(app) {
+    dialogMode = 'edit';
+    editingAppKey = app.app_name;
+    
+    // Load full app config
+    const fullConfig = await GetApp(app.app_name);
+    if (!fullConfig) {
+      log(`Error: Could not load config for ${app.display_name}`);
+      return;
+    }
+    
+    // Populate form with existing data
+    newApp.app_name = fullConfig.app_name;
+    newApp.display_name = fullConfig.display_name;
+    newApp.exe_path = fullConfig.paths?.exe_paths?.[0] || '';
+    newApp.data_path = fullConfig.paths?.data_paths?.[0] || '';
+    newApp.addon_paths = fullConfig.addon_backup_paths || [];
+    
+    // Determine app type and populate backup items
+    const existingItems = fullConfig.backup_items || [];
+    const isVscodePreset = existingItems.some(item => 
+      vscodePresetItems.some(preset => preset.path === item.path)
+    );
+    
+    if (isVscodePreset && existingItems.length > 0) {
+      newApp.app_type = 'vscode';
+      // Map preset items with enabled state based on existing config
+      newApp.backup_items = vscodePresetItems.map(preset => {
+        const existing = existingItems.find(e => e.path === preset.path);
+        return {
+          ...preset,
+          enabled: !!existing
+        };
+      });
+      // Add any custom items that aren't in preset
+      existingItems.forEach(item => {
+        if (!vscodePresetItems.find(p => p.path === item.path)) {
+          newApp.backup_items.push({
+            path: item.path,
+            description: item.description || 'Custom item',
+            optional: item.optional ?? true,
+            enabled: true
+          });
+        }
+      });
+    } else {
+      newApp.app_type = 'custom';
+      newApp.backup_items = existingItems.map(item => ({
+        path: item.path,
+        description: item.description || '',
+        optional: item.optional ?? true,
+        enabled: true
+      }));
+    }
+    
+    showAddDialog = true;
+  }
+
+  function openAddDialog() {
+    dialogMode = 'add';
+    editingAppKey = null;
+    resetNewApp();
+    showAddDialog = true;
   }
 
   function toggleBackupItem(index) {
@@ -230,7 +303,9 @@
         optional: item.optional
       }));
 
-    if (enabledItems.length === 0) {
+    // For custom type, allow saving with no backup items (user might add later)
+    // For vscode type, require at least one item
+    if (newApp.app_type === 'vscode' && enabledItems.length === 0) {
       alert('Please select at least one backup item');
       return;
     }
@@ -252,7 +327,7 @@
 
     try {
       await SaveApp(config);
-      log(`Added: ${config.display_name}`);
+      log(`${dialogMode === 'edit' ? 'Updated' : 'Added'}: ${config.display_name}`);
       showAddDialog = false;
       resetNewApp();
       await loadApps();
@@ -273,10 +348,12 @@
     };
     customItemPath = '';
     customItemDesc = '';
+    dialogMode = 'add';
+    editingAppKey = null;
   }
 
-  // Initialize backup items when dialog opens
-  $: if (showAddDialog && newApp.backup_items.length === 0) {
+  // Initialize backup items when dialog opens for ADD mode only
+  $: if (showAddDialog && dialogMode === 'add' && newApp.backup_items.length === 0) {
     newApp.backup_items = vscodePresetItems.map(item => ({ ...item }));
   }
 </script>
@@ -287,7 +364,7 @@
     <div class="flex items-center gap-3">
       <button 
         class="px-4 py-2 rounded-lg font-medium bg-[var(--primary)] hover:bg-[var(--primary-light)] hover:text-black text-white transition-all flex items-center gap-2"
-        on:click={() => showAddDialog = true}
+        on:click={openAddDialog}
       >
         <Plus size={16} />
         Add App
@@ -363,6 +440,13 @@
                     {app.active ? 'Active' : 'Inactive'}
                   </button>
                   <button
+                    class="p-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--primary)] hover:bg-[var(--bg-hover)] transition-colors"
+                    on:click={() => openEditDialog(app)}
+                    title="Edit"
+                  >
+                    <Edit size={14} />
+                  </button>
+                  <button
                     class="p-1.5 rounded text-[var(--text-secondary)] hover:text-[var(--danger)] hover:bg-[var(--bg-hover)] transition-colors"
                     on:click={() => handleDelete(app)}
                     title="Delete"
@@ -413,6 +497,13 @@
     
     <button
       class="w-full px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2"
+      on:click={() => { openEditDialog(contextMenu.app); closeContextMenu(); }}
+    >
+      <Edit size={14} />
+      Edit App
+    </button>
+    <button
+      class="w-full px-3 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2"
       on:click={() => { handleOpenAppConfig(contextMenu.app); closeContextMenu(); }}
     >
       <FileJson size={14} />
@@ -438,12 +529,14 @@
   </div>
 {/if}
 
-<!-- Add App Dialog -->
+<!-- Add/Edit App Dialog -->
 {#if showAddDialog}
   <div class="fixed inset-0 bg-black/60 flex items-center justify-center z-50" on:click|self={() => { showAddDialog = false; resetNewApp(); }}>
     <div class="bg-[var(--bg-card)] rounded-xl border border-[var(--border)] w-full max-w-4xl p-6 animate-fadeIn max-h-[90vh] overflow-auto">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-[var(--text-primary)]">Add Application</h3>
+        <h3 class="text-lg font-semibold text-[var(--text-primary)]">
+          {dialogMode === 'edit' ? 'Edit Application' : 'Add Application'}
+        </h3>
         <button 
           class="p-1 rounded hover:bg-[var(--bg-hover)] text-[var(--text-muted)]"
           on:click={() => { showAddDialog = false; resetNewApp(); }}
@@ -465,6 +558,9 @@
               bind:value={newApp.display_name}
               placeholder="Auto-filled from .exe"
             />
+            {#if dialogMode === 'edit'}
+              <p class="text-xs text-[var(--text-muted)] mt-1">ID: {newApp.app_name} (cannot be changed)</p>
+            {/if}
           </div>
 
           <!-- App Type Toggle -->
