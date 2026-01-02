@@ -4,7 +4,7 @@
 
 [![Version](https://img.shields.io/badge/version-2.0.0-brightgreen.svg)](https://github.com/risunCode/SurfManager)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)](https://github.com/risunCode/SurfManager)
-[![Go](https://img.shields.io/badge/go-1.21+-00ADD8.svg)](https://golang.org/)
+[![Go](https://img.shields.io/badge/go-1.22+-00ADD8.svg)](https://golang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ---
@@ -46,12 +46,14 @@ Perfect for developers who need to:
 |---------|-------------|
 | **📱 Session Management** | Backup, restore, and manage multiple app sessions |
 | **🔄 Account Switching** | Switch between different accounts in seconds |
-| **�️ Smairt App Close** | Auto-close running apps before operations (optional) |
-| **� Proogress Tracking** | Real-time progress bars for all operations |
-| **� Seaarch & Filter** | Quick search through sessions and auto-backups |
-| **� Auto-eBackup** | Automatic backup before reset operations |
+| **🛠️ Smart App Close** | Auto-close running apps before operations (optional) |
+| **📊 Progress Tracking** | Real-time progress bars for all operations |
+| **🔍 Search & Filter** | Quick search through sessions and auto-backups |
+| **💾 Auto-Backup** | Automatic backup before reset operations |
 | **🎨 Theme System** | Dark, Solarized Dark, and Solarized Light themes |
 | **⚙️ Customizable Settings** | Persistent settings for personalized experience |
+| **📝 Custom App Config** | VSCode preset or fully custom backup items |
+| **✏️ Edit App Config** | Edit existing app configurations via UI |
 
 ### 🚀 What's New in v2.0
 
@@ -63,6 +65,8 @@ Perfect for developers who need to:
 - **Skip Close App** - Perform operations without closing target app
 - **Customizable Backups** - Choose exactly what to backup
 - **Additional Folders** - Backup extra directories (e.g., ~/.aws, ~/.ssh)
+- **Custom App Type** - Create apps with only addon folders (no AppData backup)
+- **Edit App Config** - Edit existing app configurations via UI dialog
 
 ---
 
@@ -136,8 +140,8 @@ Sessions are tied to the Windows user account. You cannot transfer backups betwe
 1. Visit [Releases Page](https://github.com/risunCode/SurfManager/releases)
 2. Download for your platform:
    - Windows: `SurfManager-windows-amd64.exe`
-   - macOS: `SurfManager-darwin-amd64` (needs testing)
-   - Linux: `SurfManager-linux-amd64` (needs testing)
+   - macOS: `SurfManager-darwin-amd64.zip` or `SurfManager-darwin-arm64.zip` (extract and run `.app`)
+   - Linux: `SurfManager-linux-amd64`
 3. Run directly - no installation required!
 
 ---
@@ -146,7 +150,7 @@ Sessions are tied to the Windows user account. You cannot transfer backups betwe
 
 ### Prerequisites (All Platforms)
 
-- **Go 1.21+** - [Download](https://golang.org/dl/)
+- **Go 1.22+** - [Download](https://golang.org/dl/)
 - **Node.js 18+** - [Download](https://nodejs.org/)
 - **Wails CLI** - Install with: `go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 
@@ -323,8 +327,8 @@ This will:
 |----------|-------------|--------------|
 | Windows | `SurfManager-windows-amd64.exe` | 64-bit Intel/AMD |
 | Linux | `SurfManager-linux-amd64` | 64-bit Intel/AMD |
-| macOS | `SurfManager-darwin-amd64` | Intel Mac |
-| macOS | `SurfManager-darwin-arm64` | Apple Silicon (M1/M2/M3) |
+| macOS | `SurfManager-darwin-amd64.zip` (.app inside) | Intel Mac |
+| macOS | `SurfManager-darwin-arm64.zip` (.app inside) | Apple Silicon (M1/M2/M3) |
 
 ---
 
