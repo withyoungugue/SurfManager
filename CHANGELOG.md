@@ -2,6 +2,24 @@
 
 All notable changes to SurfManager will be documented in this file.
 
+## [2.0.1] - 2026-01-03
+
+### 🔧 Fixes & Improvements
+
+**GitHub Actions Workflow**
+- Fixed invalid workflow file error on `build.yml`
+- Resolved `matrix` context not accessible at job-level `if` condition
+- Added step-level platform filtering for manual workflow dispatch
+- Now properly supports selective platform builds (windows/linux/macos)
+
+**Settings UX Improvement**
+- Renamed "Skip Close App" to "Keep App Running" for better clarity
+- Updated description to be more intuitive
+- Toggle ON = app stays running during backup/restore/reset
+- Toggle OFF = app will be closed before operations
+
+---
+
 ## [2.0.0] - 2025-12-06
 
 ### 🚀 Complete Rewrite - Go + Wails + Svelte

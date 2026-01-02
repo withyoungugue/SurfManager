@@ -93,8 +93,8 @@
         />
 
         <SettingToggle
-          label="Skip Close App"
-          description="Don't close target app before reset/backup/restore operations"
+          label="Keep App Running"
+          description="Don't close target app before reset/backup/restore operations (enable this to skip closing)"
           checked={$settings.skipCloseApp}
           on:change={() => toggle('skipCloseApp')}
         />

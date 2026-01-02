@@ -41,41 +41,55 @@ jobs:
             name: macos-arm64
 
     runs-on: ${{ matrix.os }}
-    if: >-
-      github.event_name == 'push' ||
-      github.event.inputs.platform == 'all' ||
-      github.event.inputs.platform == matrix.name
     
     steps:
+      - name: Check platform filter
+        id: filter
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]] || \
+             [[ "${{ github.event.inputs.platform }}" == "all" ]] || \
+             [[ "${{ github.event.inputs.platform }}" == "${{ matrix.name }}" ]]; then
+            echo "skip=false" >> $GITHUB_OUTPUT
+          else
+            echo "skip=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout
+        if: steps.filter.outputs.skip == 'false'
         uses: actions/checkout@v4
 
       - name: Setup Go
+        if: steps.filter.outputs.skip == 'false'
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
       - name: Setup Node.js
+        if: steps.filter.outputs.skip == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
       - name: Install Wails CLI
+        if: steps.filter.outputs.skip == 'false'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       # Linux dependencies
       - name: Install Linux Dependencies
-        if: matrix.os == 'ubuntu-latest'
+        if: steps.filter.outputs.skip == 'false' && matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
       # Build
       - name: Build
+        if: steps.filter.outputs.skip == 'false'
         run: wails build -platform ${{ matrix.platform }} -o ${{ matrix.output }}
 
       # Upload artifact
       - name: Upload Artifact
+        if: steps.filter.outputs.skip == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
