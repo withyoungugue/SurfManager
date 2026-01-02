@@ -42,19 +42,13 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     
+    # Skip entire job if platform doesn't match (workflow_dispatch only)
+    if: |
+      github.event_name == 'push' ||
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == matrix.name
+    
     steps:
-      - name: Check platform filter
-        id: filter
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]] || \
-             [[ "${{ github.event.inputs.platform }}" == "all" ]] || \
-             [[ "${{ github.event.inputs.platform }}" == "${{ matrix.name }}" ]]; then
-            echo "skip=false" >> $GITHUB_OUTPUT
-          else
-            echo "skip=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Checkout
         if: steps.filter.outputs.skip == 'false'
         uses: actions/checkout@v4
