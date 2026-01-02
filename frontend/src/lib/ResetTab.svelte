@@ -15,7 +15,6 @@
   let sessionCount = 0;
 
   $: autoBackup = $settings.autoBackup;
-  $: skipCloseApp = $settings.skipCloseApp;
 
   onMount(loadApps);
 
@@ -66,7 +65,7 @@
     
     log(`[Reset] Starting ${selectedApp.display_name}...`);
     try {
-      await ResetApp(selectedApp.app_name, autoBackup, skipCloseApp);
+      await ResetApp(selectedApp.app_name, autoBackup, $settings.skipCloseApp);
       log(`[Reset] ${selectedApp.display_name} complete!`);
       await loadApps();
     } catch (e) {

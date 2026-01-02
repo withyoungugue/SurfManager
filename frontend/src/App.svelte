@@ -171,16 +171,15 @@
     </div>
 
     <!-- Footer -->
-    <footer class="h-8 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex items-center justify-between px-4 text-xs transition-colors">
-      <span class="text-[var(--text-muted)]">{progress.message}</span>
-      {#if progress.percent > 0 && progress.percent < 100}
-        <div class="w-48 h-1.5 bg-[var(--bg-hover)] rounded-full overflow-hidden">
-          <div 
-            class="h-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] transition-all duration-300"
-            style="width: {progress.percent}%"
-          ></div>
-        </div>
-      {/if}
+    <footer class="h-10 bg-[var(--bg-elevated)] border-t border-[var(--border)] flex items-center gap-4 px-4 text-xs transition-colors">
+      <span class="text-[var(--text-muted)] flex-shrink-0">{progress.message}</span>
+      <div class="flex-1 h-2 bg-[var(--bg-hover)] rounded-full overflow-hidden">
+        <div 
+          class="h-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] transition-all duration-300"
+          style="width: {progress.percent}%"
+        ></div>
+      </div>
+      <span class="text-[var(--text-muted)] flex-shrink-0 w-10 text-right">{progress.percent}%</span>
     </footer>
   </div>
 </main>

@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurfManager | IDE Session & Data Management Tool</title>
+    <meta name="description" content="Reset IDE data, Create backup and restore, manage multi-account easily. Advanced session management tool for AI coding applications.">
+    <meta name="keywords" content="surfmanager, session management, backup restore, multi-account, ide, vscode, developer tools">
+    <meta name="author" content="risunCode">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://github.com/risunCode/SurfManager">
+    <meta property="og:title" content="SurfManager - IDE Session & Data Management Tool">
+    <meta property="og:description" content="Reset IDE data, Create backup and restore, manage multi-account easily.">
+    <meta property="og:image" content="https://raw.githubusercontent.com/risunCode/SurfManager/main/web/assets/images/1_reset.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="SurfManager - IDE Session & Data Management Tool">
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://github.com/risunCode/SurfManager">
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "SurfManager",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Windows, Linux, macOS",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "description": "Advanced session and data management tool for AI coding applications.",
+        "softwareVersion": "2.0.0",
+        "license": "https://opensource.org/licenses/MIT",
+        "author": { "@type": "Person", "name": "risunCode" }
+    }
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 900: '#0a0a0a', 800: '#111111', 700: '#1a1a1a', 600: '#222222' },
+                        accent: { green: '#00ff41', cyan: '#00d4ff', dim: '#0d7377' }
+                    },
+                    fontFamily: { mono: ['Consolas', 'Monaco', 'monospace'] }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glow { text-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
+        .glow-box { box-shadow: 0 0 20px rgba(0, 255, 65, 0.15); }
+        .glow-box:hover { box-shadow: 0 0 30px rgba(0, 255, 65, 0.25); }
+        .cursor-blink::after { content: '_'; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        .gradient-border { background: linear-gradient(135deg, #00ff41 0%, #00d4ff 100%); padding: 2px; }
+        .gradient-border > * { background: #111111; }
+        .hero-preview { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .hero-preview:hover { transform: scale(1.02); box-shadow: 0 20px 40px rgba(0, 255, 65, 0.2); }
+        .gallery-item { cursor: pointer; transition: all 0.3s ease; }
+        .gallery-item:hover { transform: translateY(-5px); }
+        .gallery-item img { transition: transform 0.3s ease; }
+        .gallery-item:hover img { transform: scale(1.05); }
+        .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; align-items: center; justify-content: center; }
+        .lightbox.active { display: flex; }
+        .lightbox img { max-width: 90%; max-height: 90%; border: 2px solid #00ff41; }
+        .badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    </style>
+</head>
+
+<body class="bg-dark-900 text-gray-400 font-mono antialiased">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-dark-900/95 backdrop-blur border-b border-dark-600">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="flex justify-between items-center h-14">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-terminal text-accent-green"></i>
+                    <span class="text-lg font-bold text-accent-green glow">SURFMANAGER</span>
+                    <span class="text-xs text-accent-cyan border border-accent-cyan px-2 py-0.5">v2.0.0</span>
+                </div>
+                <div class="hidden md:flex items-center gap-6 text-sm">
+                    <a href="#home" class="hover:text-accent-green transition">[HOME]</a>
+                    <a href="#features" class="hover:text-accent-green transition">[FEATURES]</a>
+                    <a href="#about" class="hover:text-accent-green transition">[ABOUT]</a>
+                    <a href="#gallery" class="hover:text-accent-green transition">[GALLERY]</a>
+                    <a href="web/docs.html" class="hover:text-accent-green transition">[DOCS]</a>
+                    <a href="https://github.com/risunCode/SurfManager/releases" target="_blank" 
+                       class="bg-accent-green text-dark-900 px-4 py-1.5 font-bold hover:bg-accent-cyan transition">
+                        <i class="fa-solid fa-download mr-1"></i> DOWNLOAD
+                    </a>
+                </div>
+                <button id="menu-btn" class="md:hidden text-accent-green">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-dark-800 border-t border-dark-600">
+            <div class="px-4 py-3 space-y-2 text-sm">
+                <a href="#home" class="block py-2 hover:text-accent-green">[HOME]</a>
+                <a href="#features" class="block py-2 hover:text-accent-green">[FEATURES]</a>
+                <a href="#about" class="block py-2 hover:text-accent-green">[ABOUT]</a>
+                <a href="#gallery" class="block py-2 hover:text-accent-green">[GALLERY]</a>
+                <a href="web/docs.html" class="block py-2 hover:text-accent-green">[DOCS]</a>
+                <a href="https://github.com/risunCode/SurfManager/releases" target="_blank" 
+                   class="block bg-accent-green text-dark-900 px-4 py-2 text-center font-bold">DOWNLOAD</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section - New Design with Preview -->
+    <section id="home" class="min-h-screen pt-20 pb-12 px-4">
+        <div class="max-w-7xl mx-auto">
+            <!-- Hero Header -->
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center gap-2 bg-dark-800 border border-accent-green/30 px-4 py-2 rounded-full mb-6 badge">
+                    <span class="w-2 h-2 rounded-full bg-accent-green animate-pulse"></span>
+                    <span class="text-accent-green text-sm">v2.0.0 — Complete Rewrite in Go + Wails + Svelte</span>
+                </div>
+                <h1 class="text-4xl lg:text-6xl font-bold text-accent-green glow mb-4">
+                    SURFMANAGER<span class="cursor-blink"></span>
+                </h1>
+                <p class="text-xl text-accent-cyan mb-2">Advanced Session & Data Management Tool</p>
+                <p class="text-gray-400 max-w-2xl mx-auto mb-8">
+                    Take control of your AI coding environments. Backup, restore, and manage sessions with precision.
+                    Built for developers who demand efficiency.
+                </p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="https://github.com/risunCode/SurfManager/releases" target="_blank"
+                       class="bg-accent-green text-dark-900 px-8 py-3 font-bold hover:bg-accent-cyan transition text-lg">
+                        <i class="fa-solid fa-download mr-2"></i>DOWNLOAD
+                    </a>
+                    <a href="https://github.com/risunCode/SurfManager" target="_blank"
+                       class="border-2 border-accent-green text-accent-green px-8 py-3 font-bold hover:bg-accent-green hover:text-dark-900 transition text-lg">
+                        <i class="fa-brands fa-github mr-2"></i>VIEW SOURCE
+                    </a>
+                </div>
+            </div>
+
+            <!-- App Preview -->
+            <div class="gradient-border rounded-lg mb-12 hero-preview">
+                <div class="bg-dark-800 rounded-lg overflow-hidden">
+                    <div class="flex items-center gap-2 bg-dark-700 px-4 py-2 border-b border-dark-600">
+                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                        <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                        <span class="text-xs text-gray-500 ml-2">SurfManager v2.0.0</span>
+                    </div>
+                    <img src="web/assets/images/1_reset.jpg" alt="SurfManager Preview" class="w-full">
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="border border-dark-600 bg-dark-800 p-5 text-center hover:border-accent-green transition glow-box">
+                    <i class="fa-solid fa-bolt text-accent-green text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold text-accent-green">&lt;0.5s</div>
+                    <div class="text-xs text-gray-500 mt-1">LAUNCH TIME</div>
+                </div>
+                <div class="border border-dark-600 bg-dark-800 p-5 text-center hover:border-accent-green transition glow-box">
+                    <i class="fa-solid fa-hard-drive text-accent-green text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold text-accent-green">~15MB</div>
+                    <div class="text-xs text-gray-500 mt-1">BINARY SIZE</div>
+                </div>
+                <div class="border border-dark-600 bg-dark-800 p-5 text-center hover:border-accent-green transition glow-box">
+                    <i class="fa-solid fa-code text-accent-green text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold text-accent-green">Go</div>
+                    <div class="text-xs text-gray-500 mt-1">POWERED BY</div>
+                </div>
+                <div class="border border-dark-600 bg-dark-800 p-5 text-center hover:border-accent-green transition glow-box">
+                    <i class="fa-solid fa-desktop text-accent-green text-2xl mb-2"></i>
+                    <div class="text-2xl font-bold text-accent-green">3</div>
+                    <div class="text-xs text-gray-500 mt-1">PLATFORMS</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section - Grid Layout -->
+    <section id="features" class="py-16 px-4 border-t border-dark-600">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-2xl lg:text-4xl font-bold text-accent-green glow mb-2">
+                    <i class="fa-solid fa-terminal mr-3"></i>FEATURES
+                </h2>
+                <p class="text-accent-cyan text-sm">// What can SurfManager do?</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- Feature Cards -->
+                <div class="border border-dark-600 bg-dark-800 p-5 hover:border-accent-green transition glow-box">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-database text-accent-green text-xl"></i>
+                        <h3 class="font-bold text-accent-green">Session Management</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Create custom session backups</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Restore sessions instantly</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Batch operations support</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Auto-backup before reset</li>
+                    </ul>
+                </div>
+
+                <div class="border border-dark-600 bg-dark-800 p-5 hover:border-accent-green transition glow-box">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-microchip text-accent-green text-xl"></i>
+                        <h3 class="font-bold text-accent-green">Smart Operations</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Real-time process detection</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Auto-close running apps</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Intelligent caching</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Quick folder access</li>
+                    </ul>
+                </div>
+
+                <div class="border border-dark-600 bg-dark-800 p-5 hover:border-accent-green transition glow-box">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-gauge-high text-accent-green text-xl"></i>
+                        <h3 class="font-bold text-accent-green">Performance</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Lightning fast startup</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Optimized binary size</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Efficient processing</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Smart cache management</li>
+                    </ul>
+                </div>
+
+                <div class="border border-dark-600 bg-dark-800 p-5 hover:border-accent-green transition glow-box">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-desktop text-accent-green text-xl"></i>
+                        <h3 class="font-bold text-accent-green">Cross-Platform</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><i class="fa-solid fa-check text-accent-green mr-2"></i>Windows 10/11 (Full)</li>
+                        <li><i class="fa-solid fa-clock text-yellow-500 mr-2"></i>Linux (Partial)</li>
+                        <li><i class="fa-solid fa-clock text-yellow-500 mr-2"></i>macOS (Partial)</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Platform adapters</li>
+                    </ul>
+                </div>
+
+                <div class="border border-dark-600 bg-dark-800 p-5 hover:border-accent-green transition glow-box">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-sliders text-accent-green text-xl"></i>
+                        <h3 class="font-bold text-accent-green">Dynamic Config</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>JSON-based configs</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Add apps without coding</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Variable substitution</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Hot reload capability</li>
+                    </ul>
+                </div>
+
+                <div class="border border-dark-600 bg-dark-800 p-5 hover:border-accent-green transition glow-box">
+                    <div class="flex items-center gap-3 mb-4">
+                        <i class="fa-solid fa-shield text-accent-green text-xl"></i>
+                        <h3 class="font-bold text-accent-green">Safety First</h3>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400">
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Automatic backups</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Safe data operations</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Comprehensive logging</li>
+                        <li><i class="fa-solid fa-chevron-right text-accent-dim mr-2"></i>Error recovery system</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section - Wide Layout -->
+    <section id="about" class="py-16 px-4 border-t border-dark-600">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-2xl lg:text-4xl font-bold text-accent-green glow mb-2">
+                    <i class="fa-solid fa-circle-info mr-3"></i>ABOUT
+                </h2>
+                <p class="text-accent-cyan text-sm">// What is SurfManager?</p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Main Description -->
+                <div class="lg:col-span-2 border border-dark-600 bg-dark-800 p-6 glow-box">
+                    <h3 class="text-lg font-bold text-accent-cyan mb-4">
+                        <i class="fa-solid fa-question-circle mr-2"></i>WHAT IS THIS?
+                    </h3>
+                    <p class="text-gray-400 leading-relaxed mb-4">
+                        SurfManager is a powerful session and data management tool designed specifically for AI coding applications.
+                        It provides developers with complete control over their development environment data.
+                    </p>
+                    <p class="text-gray-400 leading-relaxed mb-6">
+                        Built with efficiency and safety in mind, SurfManager automates the tedious process of backing up,
+                        restoring, and managing application sessions - allowing you to focus on what matters: coding.
+                    </p>
+                    
+                    <h4 class="text-sm font-bold text-accent-cyan mb-3">SUPPORTED APPLICATIONS</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-gray-400"><i class="fa-solid fa-check text-accent-green mr-2"></i>Cursor</span>
+                        <span class="text-gray-400"><i class="fa-solid fa-check text-accent-green mr-2"></i>Windsurf</span>
+                        <span class="text-gray-400"><i class="fa-solid fa-check text-accent-green mr-2"></i>VS Code</span>
+                        <span class="text-gray-400"><i class="fa-solid fa-check text-accent-green mr-2"></i>VSCode Forks</span>
+                    </div>
+                    <p class="text-accent-green text-sm mt-4">
+                        <i class="fa-solid fa-plus mr-2"></i>Easily add custom apps via App Configuration
+                    </p>
+                </div>
+
+                <!-- Technical Details -->
+                <div class="border border-dark-600 bg-dark-800 p-6 glow-box">
+                    <h3 class="text-lg font-bold text-accent-cyan mb-4">
+                        <i class="fa-solid fa-code mr-2"></i>TECHNICAL
+                    </h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between border-b border-dark-600 pb-2">
+                            <span class="text-gray-500">Backend</span>
+                            <span class="text-gray-400">Go 1.21+</span>
+                        </div>
+                        <div class="flex justify-between border-b border-dark-600 pb-2">
+                            <span class="text-gray-500">Framework</span>
+                            <span class="text-gray-400">Wails v2</span>
+                        </div>
+                        <div class="flex justify-between border-b border-dark-600 pb-2">
+                            <span class="text-gray-500">Frontend</span>
+                            <span class="text-gray-400">Svelte + Tailwind</span>
+                        </div>
+                        <div class="flex justify-between border-b border-dark-600 pb-2">
+                            <span class="text-gray-500">Config</span>
+                            <span class="text-gray-400">JSON</span>
+                        </div>
+                        <div class="flex justify-between border-b border-dark-600 pb-2">
+                            <span class="text-gray-500">License</span>
+                            <span class="text-gray-400">MIT</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Source</span>
+                            <span class="text-accent-green">Open Source</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Why Cards -->
+            <div class="grid md:grid-cols-3 gap-5 mt-6">
+                <div class="border border-dark-600 bg-dark-800 p-5 glow-box">
+                    <div class="text-accent-cyan font-bold mb-2">
+                        <i class="fa-solid fa-bolt mr-2"></i>FAST
+                    </div>
+                    <p class="text-sm text-gray-400">Startup in &lt;0.5 second. Operations executed instantly with intelligent caching.</p>
+                </div>
+                <div class="border border-dark-600 bg-dark-800 p-5 glow-box">
+                    <div class="text-accent-cyan font-bold mb-2">
+                        <i class="fa-solid fa-shield-halved mr-2"></i>SAFE
+                    </div>
+                    <p class="text-sm text-gray-400">Automatic backups before operations. Safe data handling with error recovery.</p>
+                </div>
+                <div class="border border-dark-600 bg-dark-800 p-5 glow-box">
+                    <div class="text-accent-cyan font-bold mb-2">
+                        <i class="fa-solid fa-cubes mr-2"></i>EXTENSIBLE
+                    </div>
+                    <p class="text-sm text-gray-400">Add new applications without coding. JSON-based configuration for flexibility.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section id="gallery" class="py-16 px-4 border-t border-dark-600">
+        <div class="max-w-7xl mx-auto">
+            <div class="mb-10">
+                <h2 class="text-2xl lg:text-4xl font-bold text-accent-green glow mb-2">
+                    <i class="fa-solid fa-images mr-3"></i>GALLERY
+                </h2>
+                <p class="text-accent-cyan text-sm">// Click to enlarge screenshots</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div class="gallery-item border border-dark-600 bg-dark-800 p-3 glow-box hover:border-accent-green" onclick="openLightbox('web/assets/images/1_reset.jpg')">
+                    <div class="overflow-hidden rounded mb-3">
+                        <img src="web/assets/images/1_reset.jpg" alt="Reset Data Tab" class="w-full h-48 object-cover">
+                    </div>
+                    <p class="text-sm text-gray-400 text-center"><i class="fa-solid fa-rotate-left text-accent-green mr-2"></i>Reset Data</p>
+                </div>
+                <div class="gallery-item border border-dark-600 bg-dark-800 p-3 glow-box hover:border-accent-green" onclick="openLightbox('web/assets/images/2_sessions.jpg')">
+                    <div class="overflow-hidden rounded mb-3">
+                        <img src="web/assets/images/2_sessions.jpg" alt="Sessions & Backup" class="w-full h-48 object-cover">
+                    </div>
+                    <p class="text-sm text-gray-400 text-center"><i class="fa-solid fa-database text-accent-green mr-2"></i>Sessions & Backup</p>
+                </div>
+                <div class="gallery-item border border-dark-600 bg-dark-800 p-3 glow-box hover:border-accent-green" onclick="openLightbox('web/assets/images/3_config_app.jpg')">
+                    <div class="overflow-hidden rounded mb-3">
+                        <img src="web/assets/images/3_config_app.jpg" alt="App Configuration" class="w-full h-48 object-cover">
+                    </div>
+                    <p class="text-sm text-gray-400 text-center"><i class="fa-solid fa-gear text-accent-green mr-2"></i>App Configuration</p>
+                </div>
+                <div class="gallery-item border border-dark-600 bg-dark-800 p-3 glow-box hover:border-accent-green" onclick="openLightbox('web/assets/images/4_notes.jpg')">
+                    <div class="overflow-hidden rounded mb-3">
+                        <img src="web/assets/images/4_notes.jpg" alt="Notes Tab" class="w-full h-48 object-cover">
+                    </div>
+                    <p class="text-sm text-gray-400 text-center"><i class="fa-solid fa-sticky-note text-accent-green mr-2"></i>Notes</p>
+                </div>
+                <div class="gallery-item border border-dark-600 bg-dark-800 p-3 glow-box hover:border-accent-green" onclick="openLightbox('web/assets/images/5_settings.jpg')">
+                    <div class="overflow-hidden rounded mb-3">
+                        <img src="web/assets/images/5_settings.jpg" alt="Settings Tab" class="w-full h-48 object-cover">
+                    </div>
+                    <p class="text-sm text-gray-400 text-center"><i class="fa-solid fa-sliders text-accent-green mr-2"></i>Settings</p>
+                </div>
+                <div class="gallery-item border border-dark-600 bg-dark-800 p-3 glow-box hover:border-accent-green" onclick="openLightbox('web/assets/images/6_about.jpg')">
+                    <div class="overflow-hidden rounded mb-3">
+                        <img src="web/assets/images/6_about.jpg" alt="About Tab" class="w-full h-48 object-cover">
+                    </div>
+                    <p class="text-sm text-gray-400 text-center"><i class="fa-solid fa-circle-info text-accent-green mr-2"></i>About</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Preview">
+        <button class="absolute top-4 right-4 text-white text-3xl hover:text-accent-green">&times;</button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="py-10 px-4 border-t border-dark-600 bg-dark-800">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fa-solid fa-terminal text-accent-green"></i>
+                        <span class="font-bold text-accent-green">SURFMANAGER</span>
+                    </div>
+                    <p class="text-sm text-gray-500">Advanced Session & Data Management Tool for AI Coding Applications.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-400 mb-4">LINKS</h4>
+                    <div class="space-y-2 text-sm">
+                        <a href="https://github.com/risunCode/SurfManager" target="_blank" class="block text-gray-500 hover:text-accent-green transition">
+                            <i class="fa-brands fa-github mr-2"></i>GitHub Repository
+                        </a>
+                        <a href="https://github.com/risunCode/SurfManager/releases" target="_blank" class="block text-gray-500 hover:text-accent-green transition">
+                            <i class="fa-solid fa-download mr-2"></i>Download Releases
+                        </a>
+                        <a href="web/docs.html" class="block text-gray-500 hover:text-accent-green transition">
+                            <i class="fa-solid fa-book mr-2"></i>Documentation
+                        </a>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-400 mb-4">INFO</h4>
+                    <div class="space-y-2 text-sm text-gray-500">
+                        <p><i class="fa-solid fa-tag mr-2"></i>Version: 2.0.0</p>
+                        <p><i class="fa-solid fa-scale-balanced mr-2"></i>License: MIT</p>
+                        <p><i class="fa-solid fa-user mr-2"></i>Author: risunCode</p>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-dark-600 pt-6 text-center text-sm text-gray-600">
+                <p>Copyright 2025 risunCode. Open Source under MIT License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Mobile menu toggle
+        document.getElementById('menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    document.getElementById('mobile-menu').classList.add('hidden');
+                }
+            });
+        });
+
+        // Lightbox functions
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close lightbox with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+    </script>
+
+</body>
+</html>

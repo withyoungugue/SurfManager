@@ -23,8 +23,6 @@
   // Context menu state
   let contextMenu = { show: false, x: 0, y: 0, session: null };
 
-  $: skipCloseApp = $settings.skipCloseApp;
-
   onMount(() => {
     showAuto = $settings.showAutoBackups;
     filter = $settings.defaultSessionFilter;
@@ -79,7 +77,7 @@
 
     log(`Creating backup: ${newBackupApp}/${newBackupName}...`);
     try {
-      await CreateBackup(newBackupApp, newBackupName.trim(), skipCloseApp);
+      await CreateBackup(newBackupApp, newBackupName.trim(), $settings.skipCloseApp);
       log(`Backup created: ${newBackupName}`);
       showNewDialog = false;
       await loadData();
@@ -97,7 +95,7 @@
     
     log(`Restoring ${session.name}...`);
     try {
-      await RestoreBackup(session.app, session.name, skipCloseApp);
+      await RestoreBackup(session.app, session.name, $settings.skipCloseApp);
       log(`Restored: ${session.name}`);
       await loadData();
     } catch (e) {

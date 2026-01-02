@@ -21,6 +21,25 @@ Perfect for developers who need to:
 
 ---
 
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/84270f82-f69c-4697-a9bd-715dbd9aa4db" alt="Reset Data" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/4da88062-ed39-4f31-b953-38ac97e2d1e0" alt="Sessions" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/aeacc874-2d86-453f-86d1-97b2214c807a" alt="Config App" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/ba163263-f275-444a-adf5-3d49cdc9bae0" alt="Notes" width="400"/></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/7bb1bfc6-d2ae-407c-bbd1-5e76f58a2067" alt="Settings" width="400"/></td>
+    <td><img src="https://github.com/user-attachments/assets/347d989d-2df7-49d0-a8e3-b77e772cc5a7" alt="About" width="400"/></td>
+  </tr>
+</table>
+
+---
+
 ## ✨ Features
 
 | Feature | Description |
@@ -250,6 +269,62 @@ wails doctor
 ```
 
 This will check if all dependencies are installed correctly.
+
+---
+
+## 🚀 Building with GitHub Actions (Recommended)
+
+The easiest way to build for all platforms is using GitHub Actions. No need to install anything locally!
+
+### Quick Start
+
+1. **Fork the repository**
+   - Go to [github.com/risunCode/SurfManager](https://github.com/risunCode/SurfManager)
+   - Click "Fork" button (top right)
+
+2. **Enable GitHub Actions**
+   - Go to your forked repo → "Actions" tab
+   - Click "I understand my workflows, go ahead and enable them"
+
+3. **Run the build**
+   - Go to "Actions" → "Build SurfManager"
+   - Click "Run workflow" dropdown
+   - Select platform:
+     - `all` - Build for Windows, Linux, macOS (Intel & Apple Silicon)
+     - `windows-amd64` - Windows 64-bit only
+     - `linux-amd64` - Linux 64-bit only
+     - `macos-amd64` - macOS Intel only
+     - `macos-arm64` - macOS Apple Silicon only
+   - Click "Run workflow"
+
+4. **Download artifacts**
+   - Wait for build to complete (~5-10 minutes)
+   - Click on the completed workflow run
+   - Download artifacts from the bottom of the page
+
+### Creating a Release
+
+To automatically create a GitHub Release with all binaries:
+
+```bash
+# Tag your version
+git tag v2.0.0
+git push origin v2.0.0
+```
+
+This will:
+- Build for all 4 platforms automatically
+- Create a GitHub Release
+- Attach all binaries to the release
+
+### Build Outputs
+
+| Platform | Output File | Architecture |
+|----------|-------------|--------------|
+| Windows | `SurfManager-windows-amd64.exe` | 64-bit Intel/AMD |
+| Linux | `SurfManager-linux-amd64` | 64-bit Intel/AMD |
+| macOS | `SurfManager-darwin-amd64` | Intel Mac |
+| macOS | `SurfManager-darwin-arm64` | Apple Silicon (M1/M2/M3) |
 
 ---
 
