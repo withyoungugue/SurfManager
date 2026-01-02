@@ -22,7 +22,7 @@
   }
 </script>
 
-<div class="h-full flex items-center justify-center animate-fadeIn p-6">
+<div class="h-full flex flex-col items-center justify-center animate-fadeIn p-6">
   <div class="flex gap-8 lg:gap-12 max-w-4xl w-full items-center">
     
     <!-- Left: Branding -->
@@ -117,11 +117,11 @@
       </div>
     </div>
   </div>
-</div>
 
-<!-- Footer -->
-<div class="absolute bottom-4 left-0 right-0 text-center">
-  <p class="text-[var(--text-muted)] text-xs">
-    Built with <span class="text-[var(--danger)]">❤</span> using Go, Wails, and Svelte
-  </p>
+  <!-- Built with love - inside content area -->
+  <div class="mt-8 text-center">
+    <p class="text-[var(--text-muted)] text-xs">
+      Built with <span class="text-[var(--danger)]">❤</span> using Go, Wails, and Svelte
+    </p>
+  </div>
 </div>
