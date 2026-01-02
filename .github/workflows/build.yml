@@ -43,8 +43,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     if: >-
       github.event_name == 'push' ||
-      inputs.platform == 'all' ||
-      inputs.platform == matrix.name
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == matrix.name
     
     steps:
       - name: Checkout
