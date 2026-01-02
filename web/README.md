@@ -107,14 +107,7 @@ Modify `assets/js/matrix.js` for background customization.
 - **GitHub**: https://github.com/risunCode/SurfManager
 - **Releases**: https://github.com/risunCode/SurfManager/releases
 - **Issues**: https://github.com/risunCode/SurfManager/issues
-
-## 📦 Backups
-
-Backup files are created with `.backup2` extension:
-- `index.html.backup2`
-- `docs.html.backup2`
-
-To restore: `Copy-Item index.html.backup2 index.html -Force`
+ 
 
 ## 🎨 Assets
 
