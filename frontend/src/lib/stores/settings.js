@@ -33,6 +33,7 @@ const defaultSettings = {
   showRestoreAddonOnly: false,
   debugMode: false,
   experimentalRestoreAccountOnly: false, // Quick account switch (restore only state.vscdb)
+  skipDataFolder: false, // Only backup/restore Additional Folders, skip main data folder
 };
 
 function createSettingsStore() {
@@ -112,6 +113,7 @@ function createSettingsStore() {
           showRestoreAddonOnly: currentSettings.showRestoreAddonOnly,
           debugMode: currentSettings.debugMode,
           experimentalRestoreAccountOnly: currentSettings.experimentalRestoreAccountOnly,
+          skipDataFolder: currentSettings.skipDataFolder,
         }
       };
       return JSON.stringify(exportData, null, 2);

@@ -288,6 +288,13 @@
           checked={$settings.debugMode}
           on:change={() => toggle('debugMode')}
         />
+
+        <SettingToggle
+          label="Skip Data Folder (Global)"
+          description="Only backup/restore Additional Folders, skip main data folder"
+          checked={$settings.skipDataFolder}
+          on:change={() => toggle('skipDataFolder')}
+        />
       </div>
     {/if}
   </div>
