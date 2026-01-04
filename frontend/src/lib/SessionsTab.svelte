@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { Plus, RefreshCw, Search, CheckSquare, FolderOpen, Trash2 } from 'lucide-svelte';
-  import { GetActiveApps, GetAllSessions, CreateBackup, RestoreBackup, DeleteSession, SetActiveSession, OpenSessionFolder, CountAutoBackups } from '../../wailsjs/go/main/App.js';
+  import { GetActiveApps, GetAllSessions, CreateBackup, RestoreBackup, RestoreAccountOnly, DeleteSession, SetActiveSession, OpenSessionFolder, CountAutoBackups } from '../../wailsjs/go/main/App.js';
   import { confirm } from './ConfirmModal.svelte';
   import { settings } from './stores/settings.js';
 
@@ -97,6 +97,43 @@
     try {
       await RestoreBackup(session.app, session.name, $settings.skipCloseApp);
       log(`Restored: ${session.name}`);
+      await loadData();
+    } catch (e) {
+      log(`Error: ${e}`);
+      
+      // Check if error is due to file lock (skip close app enabled)
+      const errorStr = e.toString().toLowerCase();
+      if ($settings.skipCloseApp && (errorStr.includes('being used') || errorStr.includes('access') || errorStr.includes('locked') || errorStr.includes('permission'))) {
+        await confirm({
+          title: 'Restore Failed - Files Locked',
+          message: `Cannot restore "${session.name}" because files are locked by the running app.\n\nThe app is still running and has locked the data files.`,
+          confirmText: 'OK',
+          cancelText: 'Disable Skip Close',
+        }).then(result => {
+          if (!result) {
+            // User clicked "Disable Skip Close"
+            settings.update('skipCloseApp', false);
+            log('Disabled "Keep App Running" setting');
+          }
+        });
+      } else {
+        alert(`Error restoring session: ${e}`);
+      }
+    }
+  }
+
+  async function handleRestoreAccountOnly(session) {
+    const confirmed = await confirm({
+      title: 'Restore Account Only',
+      message: `Switch to account from "${session.name}"?\n\nThis will close the app and replace only the auth state file (state.vscdb).\nYour extensions, settings, and workspaces will be preserved.`,
+      confirmText: 'Switch Account'
+    });
+    if (!confirmed) return;
+    
+    log(`Switching account to ${session.name}...`);
+    try {
+      await RestoreAccountOnly(session.app, session.name);
+      log(`Account switched to: ${session.name}`);
       await loadData();
     } catch (e) {
       log(`Error: ${e}`);
@@ -375,7 +412,7 @@
 <!-- Context Menu -->
 {#if contextMenu.show}
   <div 
-    class="fixed bg-[var(--bg-card)] border border-[var(--border)] rounded-lg shadow-xl py-1 z-50 min-w-[160px]"
+    class="fixed bg-[var(--bg-card)] border border-[var(--border)] rounded-lg shadow-xl py-1 z-50 min-w-[180px]"
     style="left: {contextMenu.x}px; top: {contextMenu.y}px"
     on:click|stopPropagation={closeContextMenu}
   >
@@ -383,28 +420,36 @@
       class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)] transition-colors"
       on:click={() => { handleRestore(contextMenu.session); closeContextMenu(); }}
     >
-      Restore Session
+      🔄 Restore Session
     </button>
+    {#if $settings.experimentalRestoreAccountOnly}
+      <button
+        class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--warning)] transition-colors"
+        on:click={() => { handleRestoreAccountOnly(contextMenu.session); closeContextMenu(); }}
+      >
+        👤 Restore Account Only
+      </button>
+    {/if}
     {#if !contextMenu.session?.is_auto}
       <button
         class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--success)] transition-colors"
         on:click={() => { handleSetActive(contextMenu.session); closeContextMenu(); }}
       >
-        Set as Active
+        ✓ Set as Active
       </button>
     {/if}
     <button
       class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
       on:click={() => { handleOpenFolder(contextMenu.session); closeContextMenu(); }}
     >
-      Open Folder
+      📁 Open Folder
     </button>
     <div class="border-t border-[var(--border)] my-1"></div>
     <button
       class="w-full px-4 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors"
       on:click={() => { handleDelete(contextMenu.session); closeContextMenu(); }}
     >
-      Delete Session
+      🗑️ Delete Session
     </button>
   </div>
 {/if}

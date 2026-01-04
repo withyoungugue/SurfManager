@@ -16,6 +16,7 @@
     { id: 'sessions', label: 'Sessions', icon: Database },
     { id: 'notes', label: 'Notes', icon: FileText },
     { id: 'advanced', label: 'Advanced', icon: Monitor },
+    { id: 'experimental', label: 'Experimental', icon: Monitor },
   ];
 
   function toggle(key) {
@@ -187,6 +188,24 @@
           <RotateCcw size={16} />
           Reset All Settings
         </button>
+      </div>
+
+    {:else if activeSection === 'experimental'}
+      <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">Experimental Features</h2>
+      
+      <div class="p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/30 rounded-lg mb-4">
+        <p class="text-sm text-[var(--warning)]">
+          ⚠️ These features are experimental and may not work as expected. Use at your own risk.
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        <SettingToggle
+          label="Restore Account Only"
+          description="Enable quick account switch in Sessions context menu. Only restores auth state (state.vscdb), preserving extensions and settings."
+          checked={$settings.experimentalRestoreAccountOnly}
+          on:change={() => toggle('experimentalRestoreAccountOnly')}
+        />
       </div>
     {/if}
   </div>

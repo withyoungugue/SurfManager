@@ -368,11 +368,27 @@ func (a *App) OpenFolder(path string) error {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
+		// Convert forward slashes to backslashes for Windows Explorer
+		path = strings.ReplaceAll(path, "/", "\\")
 		cmd = exec.Command("explorer", path)
 	case "darwin":
 		cmd = exec.Command("open", path)
 	default:
 		cmd = exec.Command("xdg-open", path)
+	}
+	return cmd.Start()
+}
+
+// OpenURL opens a URL in the user's default browser (not WebView)
+func (a *App) OpenURL(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
 	}
 	return cmd.Start()
 }
@@ -536,6 +552,61 @@ func (a *App) RestoreBackup(appKey, sessionName string, skipClose bool) error {
 	if err == nil {
 		// Set as active session
 		a.backup.SetActiveSession(appKey, sessionName)
+	}
+
+	return err
+}
+
+// RestoreAccountOnly restores only the auth state file (state.vscdb) for quick account switch
+func (a *App) RestoreAccountOnly(appKey, sessionName string) error {
+	cfg := a.GetApp(appKey)
+	if cfg == nil {
+		return fmt.Errorf("app not found: %s", appKey)
+	}
+
+	dataPath := a.GetAppDataPath(appKey)
+	if dataPath == "" {
+		if len(cfg.Paths.DataPaths) > 0 {
+			dataPath = cfg.Paths.DataPaths[0]
+		} else {
+			return fmt.Errorf("no data path configured for %s", cfg.DisplayName)
+		}
+	}
+
+	// Always close the app first (required for file lock release)
+	var processNames []string
+	for _, exePath := range cfg.Paths.ExePaths {
+		processNames = append(processNames, filepath.Base(exePath))
+	}
+
+	if len(processNames) > 0 {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 10,
+			"message": fmt.Sprintf("Closing %s...", cfg.DisplayName),
+		})
+		if err := a.process.SmartClose(cfg.DisplayName, processNames); err != nil {
+			return fmt.Errorf("failed to close %s: %w", cfg.DisplayName, err)
+		}
+	}
+
+	// Restore only the auth state file
+	wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+		"percent": 50,
+		"message": "Switching account...",
+	})
+
+	err := a.backup.RestoreAccountOnly(appKey, sessionName, dataPath, func(p backup.BackupProgress) {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": p.Percent,
+			"message": p.Message,
+		})
+	})
+
+	if err == nil {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 100,
+			"message": "Account switched!",
+		})
 	}
 
 	return err

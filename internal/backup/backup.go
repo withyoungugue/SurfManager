@@ -437,6 +437,58 @@ func (m *Manager) RestoreBackup(appKey, sessionName string, targetPath string, a
 	return nil
 }
 
+// RestoreAccountOnly restores only the auth state file (state.vscdb) for quick account switch
+func (m *Manager) RestoreAccountOnly(appKey, sessionName string, targetPath string, progressCb ProgressCallback) error {
+	appKey = strings.ToLower(appKey)
+	backupFolder := filepath.Join(m.backupPath, appKey, sessionName)
+
+	// Check if backup exists
+	if _, err := os.Stat(backupFolder); os.IsNotExist(err) {
+		return fmt.Errorf("backup not found: %s", sessionName)
+	}
+
+	// The auth state file path
+	authFile := "User/globalStorage/state.vscdb"
+	srcFile := filepath.Join(backupFolder, authFile)
+	dstFile := filepath.Join(targetPath, authFile)
+
+	// Check if auth file exists in backup
+	if _, err := os.Stat(srcFile); os.IsNotExist(err) {
+		return fmt.Errorf("auth state file not found in backup: %s", authFile)
+	}
+
+	if progressCb != nil {
+		progressCb(BackupProgress{Percent: 30, Message: "Removing existing auth state..."})
+	}
+
+	// Remove existing auth file
+	if _, err := os.Stat(dstFile); err == nil {
+		if err := os.Remove(dstFile); err != nil {
+			return fmt.Errorf("failed to remove existing auth file: %w", err)
+		}
+	}
+
+	// Ensure destination directory exists
+	if err := os.MkdirAll(filepath.Dir(dstFile), 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	if progressCb != nil {
+		progressCb(BackupProgress{Percent: 60, Message: "Copying auth state..."})
+	}
+
+	// Copy auth file
+	if err := copyFile(srcFile, dstFile); err != nil {
+		return fmt.Errorf("failed to copy auth file: %w", err)
+	}
+
+	if progressCb != nil {
+		progressCb(BackupProgress{Percent: 100, Message: "Account switched!"})
+	}
+
+	return nil
+}
+
 // clearTargetPath removes all contents from the target path.
 func (m *Manager) clearTargetPath(targetPath string) error {
 	if _, err := os.Stat(targetPath); os.IsNotExist(err) {

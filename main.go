@@ -2,10 +2,13 @@ package main
 
 import (
 	"embed"
+	"os"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
 //go:embed all:frontend/dist
@@ -25,6 +28,19 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 10, G: 10, B: 10, A: 1},
 		OnStartup:        app.startup,
+
+		// FULL OFFLINE MODE - Disable all network/telemetry features
+		EnableFraudulentWebsiteDetection: false,
+
+		// Windows-specific options
+		Windows: &windows.Options{
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
+			DisablePinchZoom:     true,
+			// Isolated WebView data folder to minimize telemetry
+			WebviewUserDataPath: filepath.Join(os.TempDir(), "surfmanager_webview"),
+		},
+
 		Bind: []interface{}{
 			app,
 		},

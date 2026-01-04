@@ -26,6 +26,9 @@ const defaultSettings = {
   logRetention: 100,
   rememberLastTab: true,
   lastActiveTab: 'reset',
+  
+  // Experimental Features
+  experimentalRestoreAccountOnly: false, // Quick account switch (restore only state.vscdb)
 };
 
 function createSettingsStore() {

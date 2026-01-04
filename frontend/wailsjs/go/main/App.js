@@ -110,6 +110,10 @@ export function OpenSessionFolder(arg1, arg2) {
   return window['go']['main']['App']['OpenSessionFolder'](arg1, arg2);
 }
 
+export function OpenURL(arg1) {
+  return window['go']['main']['App']['OpenURL'](arg1);
+}
+
 export function ReloadApps() {
   return window['go']['main']['App']['ReloadApps']();
 }
@@ -120,6 +124,10 @@ export function RenameSession(arg1, arg2, arg3) {
 
 export function ResetApp(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResetApp'](arg1, arg2, arg3);
+}
+
+export function RestoreAccountOnly(arg1, arg2) {
+  return window['go']['main']['App']['RestoreAccountOnly'](arg1, arg2);
 }
 
 export function RestoreBackup(arg1, arg2, arg3) {
