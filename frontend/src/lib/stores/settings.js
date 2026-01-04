@@ -1,8 +1,8 @@
 // Settings store with localStorage persistence
 import { writable, get } from 'svelte/store';
+import { APP_VERSION } from '../version.js';
 
 const STORAGE_KEY = 'surfmanager-settings';
-const SETTINGS_VERSION = '2.0.2';
 
 const defaultSettings = {
   // General
@@ -82,7 +82,7 @@ function createSettingsStore() {
     exportSettings: () => {
       const currentSettings = get({ subscribe });
       const exportData = {
-        version: SETTINGS_VERSION,
+        version: APP_VERSION,
         exported_at: new Date().toISOString(),
         settings: {
           // General

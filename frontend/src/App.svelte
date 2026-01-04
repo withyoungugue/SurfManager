@@ -1,6 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { RotateCcw, Database, Settings, FileText, Info, Github, User, Sliders, Clock } from 'lucide-svelte';
+  import { APP_VERSION } from './lib/version.js';
   import ResetTab from './lib/ResetTab.svelte';
   import SessionsTab from './lib/SessionsTab.svelte';
   import ConfigTab from './lib/ConfigTab.svelte';
@@ -138,7 +139,7 @@
     <header class="h-12 bg-[var(--bg-elevated)] border-b border-[var(--border)] flex items-center justify-between px-4 transition-colors">
       <h1 class="text-lg font-semibold text-[var(--text-primary)]">
         SurfManager
-        <span class="text-xs text-[var(--text-muted)] ml-2">v2.0.2</span>
+        <span class="text-xs text-[var(--text-muted)] ml-2">v{APP_VERSION}</span>
       </h1>
       <div class="flex items-center gap-4 text-sm text-[var(--text-muted)]">
         <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg-card)] border border-[var(--border)]">

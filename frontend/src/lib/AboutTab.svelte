@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { Github, Heart, ExternalLink, Star, GitFork } from 'lucide-svelte';
   import { GetPlatformInfo } from '../../wailsjs/go/main/App.js';
+  import { APP_VERSION } from './version.js';
 
   let platform = {};
 
@@ -49,7 +50,7 @@
       <div class="space-y-5">
         <!-- Version -->
         <div>
-          <span class="text-[var(--primary-light)] font-bold text-2xl">v2.0.2</span>
+          <span class="text-[var(--primary-light)] font-bold text-2xl">v{APP_VERSION}</span>
           <span class="text-[var(--text-muted)] text-sm ml-2">Go + Wails + Svelte</span>
         </div>
 
