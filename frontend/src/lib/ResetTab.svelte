@@ -1,7 +1,7 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
-  import { FolderOpen, RotateCcw, Fingerprint, Play, RefreshCw, Plus, HardDrive, Clock, Database } from 'lucide-svelte';
-  import { GetActiveApps, CheckAppInstalled, GetAppDataPath, ResetApp, GenerateNewID, LaunchApp, OpenAppFolder, IsAppRunning, GetSessions } from '../../wailsjs/go/main/App.js';
+  import { FolderOpen, RotateCcw, Fingerprint, Play, RefreshCw, Plus, HardDrive, Database, Trash2, XCircle } from 'lucide-svelte';
+  import { GetActiveApps, CheckAppInstalled, GetAppDataPath, ResetApp, GenerateNewID, LaunchApp, OpenAppFolder, IsAppRunning, GetSessions, KillApp, ResetAddonData, GetApp } from '../../wailsjs/go/main/App.js';
   import { confirm } from './ConfirmModal.svelte';
   import { settings } from './stores/settings.js';
 
@@ -13,6 +13,7 @@
   let selectedApp = null;
   let loading = false;
   let sessionCount = 0;
+  let addonCount = 0;
 
   $: autoBackup = $settings.autoBackup;
 
@@ -47,6 +48,13 @@
       sessionCount = sessions?.length || 0;
     } catch (e) {
       sessionCount = 0;
+    }
+    // Load addon count
+    try {
+      const fullConfig = await GetApp(app.app_name);
+      addonCount = fullConfig?.addon_backup_paths?.length || 0;
+    } catch (e) {
+      addonCount = 0;
     }
   }
 
@@ -93,6 +101,42 @@
       log(`Launched ${selectedApp.display_name}`);
     } catch (e) {
       log(`Error launching: ${e}`);
+    }
+  }
+
+  async function handleKillApp() {
+    if (!selectedApp) return;
+    
+    log(`[Kill] Stopping ${selectedApp.display_name}...`);
+    try {
+      await KillApp(selectedApp.app_name);
+      log(`[Kill] ${selectedApp.display_name} stopped`);
+      await loadApps();
+    } catch (e) {
+      log(`[Kill] Error: ${e}`);
+    }
+  }
+
+  async function handleResetAddon() {
+    if (!selectedApp || addonCount === 0) return;
+    
+    if ($settings.confirmBeforeReset) {
+      const confirmed = await confirm({
+        title: 'Reset Addon Data',
+        message: `Delete all ${addonCount} addon folder(s) for ${selectedApp.display_name}?`,
+        confirmText: 'Delete',
+        danger: true
+      });
+      if (!confirmed) return;
+    }
+    
+    log(`[ResetAddon] Deleting addon folders for ${selectedApp.display_name}...`);
+    try {
+      await ResetAddonData(selectedApp.app_name, $settings.skipCloseApp);
+      log(`[ResetAddon] ${selectedApp.display_name} addon data deleted!`);
+      await loadApps();
+    } catch (e) {
+      log(`[ResetAddon] Error: ${e}`);
     }
   }
 
@@ -225,56 +269,84 @@
             </p>
           </div>
 
-          <!-- Action Buttons -->
-          <div class="grid grid-cols-4 gap-2">
+          <!-- Action Buttons - 2 rows, 3 columns -->
+          <div class="grid grid-cols-3 gap-2">
             <button
-              class="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               on:click={handleOpenFolder}
               disabled={!selectedApp.dataPath}
+              title="Open data folder"
             >
-              <FolderOpen size={20} />
-              <span class="text-[10px] font-medium">Folder</span>
+              <FolderOpen size={18} />
+              <span class="text-xs font-medium">Folder</span>
             </button>
             <button
-              class="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               on:click={handleReset}
               disabled={!selectedApp.dataPath}
+              title="Reset all app data"
             >
-              <RotateCcw size={20} />
-              <span class="text-[10px] font-medium">Reset</span>
+              <RotateCcw size={18} />
+              <span class="text-xs font-medium">Reset</span>
+            </button>
+            {#if addonCount > 0}
+              <button
+                class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--warning)] hover:border-[var(--warning)] transition-all"
+                on:click={handleResetAddon}
+                title="Delete addon folders ({addonCount})"
+              >
+                <Trash2 size={18} />
+                <span class="text-xs font-medium">Addons</span>
+              </button>
+            {:else}
+              <button
+                class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--warning)] hover:border-[var(--warning)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                on:click={handleNewID}
+                disabled={!selectedApp.dataPath}
+                title="Generate new machine ID"
+              >
+                <Fingerprint size={18} />
+                <span class="text-xs font-medium">NewID</span>
+              </button>
+            {/if}
+            {#if addonCount > 0}
+              <button
+                class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--warning)] hover:border-[var(--warning)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                on:click={handleNewID}
+                disabled={!selectedApp.dataPath}
+                title="Generate new machine ID"
+              >
+                <Fingerprint size={18} />
+                <span class="text-xs font-medium">NewID</span>
+              </button>
+            {/if}
+            <button
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--danger)] hover:border-[var(--danger)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              on:click={handleKillApp}
+              disabled={!selectedApp.running}
+              title="Force close app"
+            >
+              <XCircle size={18} />
+              <span class="text-xs font-medium">Kill</span>
             </button>
             <button
-              class="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--warning)] hover:border-[var(--warning)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-              on:click={handleNewID}
-              disabled={!selectedApp.dataPath}
-            >
-              <Fingerprint size={20} />
-              <span class="text-[10px] font-medium">NewID</span>
-            </button>
-            <button
-              class="flex flex-col items-center gap-1.5 p-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--success)] hover:border-[var(--success)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--success)] hover:border-[var(--success)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               on:click={handleLaunch}
               disabled={!selectedApp.installed}
+              title="Launch app"
             >
-              <Play size={20} />
-              <span class="text-[10px] font-medium">Launch</span>
+              <Play size={18} />
+              <span class="text-xs font-medium">Launch</span>
             </button>
           </div>
 
           <!-- Stats -->
-          <div class="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
+          <div class="flex items-center gap-6 mt-4 pt-4 border-t border-[var(--border)]">
             <div class="flex items-center gap-2">
               <Database size={14} class="text-[var(--text-muted)]" />
               <div>
                 <span class="text-[10px] text-[var(--text-muted)] block">Sessions</span>
                 <span class="text-xs font-medium text-[var(--text-primary)]">{sessionCount} backup(s)</span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <Clock size={14} class="text-[var(--text-muted)]" />
-              <div>
-                <span class="text-[10px] text-[var(--text-muted)] block">Last Reset</span>
-                <span class="text-xs font-medium text-[var(--text-primary)]">Never</span>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -284,6 +356,15 @@
                 <span class="text-xs font-medium text-[var(--text-primary)]">{autoBackup ? 'Enabled' : 'Disabled'}</span>
               </div>
             </div>
+            {#if addonCount > 0}
+              <div class="flex items-center gap-2">
+                <FolderOpen size={14} class="text-[var(--text-muted)]" />
+                <div>
+                  <span class="text-[10px] text-[var(--text-muted)] block">Addons</span>
+                  <span class="text-xs font-medium text-[var(--text-primary)]">{addonCount} folder(s)</span>
+                </div>
+              </div>
+            {/if}
           </div>
         </div>
 

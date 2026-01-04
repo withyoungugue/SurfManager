@@ -2,21 +2,20 @@
   import { settings } from './stores/settings.js';
   import { theme } from './stores/theme.js';
   import { 
-    Palette, Shield, Database, FileText, 
-    Monitor, RotateCcw, ChevronRight 
+    Settings, Cog, Database, FlaskConical,
+    RotateCcw, ChevronRight, Download, Upload, FolderOpen, AlertTriangle
   } from 'lucide-svelte';
+  import { OpenBackupFolder } from '../../wailsjs/go/main/App.js';
   import ThemeSelector from './ThemeSelector.svelte';
   import SettingToggle from './SettingToggle.svelte';
 
-  let activeSection = 'appearance';
+  let activeSection = 'general';
 
   const sections = [
-    { id: 'appearance', label: 'Appearance', icon: Palette },
-    { id: 'behavior', label: 'Behavior', icon: Shield },
+    { id: 'general', label: 'General', icon: Settings },
+    { id: 'behavior', label: 'Behavior', icon: Cog },
     { id: 'sessions', label: 'Sessions', icon: Database },
-    { id: 'notes', label: 'Notes', icon: FileText },
-    { id: 'advanced', label: 'Advanced', icon: Monitor },
-    { id: 'experimental', label: 'Experimental', icon: Monitor },
+    { id: 'experimental', label: 'Experimental', icon: FlaskConical },
   ];
 
   function toggle(key) {
@@ -25,6 +24,65 @@
 
   function updateSetting(key, value) {
     settings.update(key, value);
+  }
+
+  // Export settings to file
+  async function handleExportSettings() {
+    try {
+      const jsonData = settings.exportSettings();
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `surfmanager-settings-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(`Export failed: ${e.message}`);
+    }
+  }
+
+  // Import settings from file
+  async function handleImportSettings() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      try {
+        const text = await file.text();
+        const result = settings.importSettings(text);
+        if (result.success) {
+          alert('Settings imported successfully!');
+        } else {
+          alert(result.message);
+        }
+      } catch (err) {
+        alert(`Import failed: ${err.message}`);
+      }
+    };
+    input.click();
+  }
+
+  // Reset all settings
+  async function handleResetSettings() {
+    if (confirm('Reset all settings to default values?\n\nThis cannot be undone.')) {
+      settings.resetSettings();
+      alert('Settings reset to defaults!');
+    }
+  }
+
+  // Open backup folder
+  async function handleOpenBackupFolder() {
+    try {
+      await OpenBackupFolder();
+    } catch (e) {
+      alert(`Error: ${e}`);
+    }
   }
 </script>
 
@@ -48,10 +106,11 @@
 
   <!-- Content -->
   <div class="flex-1 overflow-y-auto">
-    {#if activeSection === 'appearance'}
-      <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">Appearance</h2>
+    {#if activeSection === 'general'}
+      <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">General</h2>
       
       <div class="space-y-3">
+        <!-- Theme -->
         <div class="flex items-center justify-between p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
           <div>
             <p class="font-medium text-[var(--text-primary)]">Theme</p>
@@ -59,19 +118,55 @@
           </div>
           <ThemeSelector />
         </div>
+
+        <!-- Remember Last Tab -->
+        <SettingToggle
+          label="Remember Last Tab"
+          description="Open last active tab on startup"
+          checked={$settings.rememberLastTab}
+          on:change={() => toggle('rememberLastTab')}
+        />
+
+        <!-- Settings Management Section -->
+        <div class="p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
+          <p class="font-medium mb-2 text-[var(--text-primary)]">Settings Management</p>
+          <p class="text-sm text-[var(--text-secondary)] mb-4">Import, export, or reset your settings</p>
+          
+          <div class="flex flex-col gap-2">
+            <button
+              class="w-full p-3 bg-[var(--bg-hover)] hover:bg-[var(--border)] rounded-lg 
+                transition-colors flex items-center justify-center gap-2 border border-[var(--border)] text-[var(--text-primary)]"
+              on:click={handleImportSettings}
+            >
+              <Upload size={16} />
+              Import Settings
+            </button>
+            
+            <button
+              class="w-full p-3 bg-[var(--bg-hover)] hover:bg-[var(--border)] rounded-lg 
+                transition-colors flex items-center justify-center gap-2 border border-[var(--border)] text-[var(--text-primary)]"
+              on:click={handleExportSettings}
+            >
+              <Download size={16} />
+              Export Settings
+            </button>
+            
+            <button
+              class="w-full p-3 bg-[var(--danger)]/10 text-[var(--danger)] rounded-lg 
+                hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2 border border-[var(--danger)]/30"
+              on:click={handleResetSettings}
+            >
+              <RotateCcw size={16} />
+              Reset All Settings
+            </button>
+          </div>
+        </div>
       </div>
 
     {:else if activeSection === 'behavior'}
       <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">Behavior</h2>
       
       <div class="space-y-3">
-        <SettingToggle
-          label="Auto Backup"
-          description="Automatically backup before reset"
-          checked={$settings.autoBackup}
-          on:change={() => toggle('autoBackup')}
-        />
-
         <SettingToggle
           label="Confirm Before Reset"
           description="Show confirmation dialog before resetting app data"
@@ -94,8 +189,15 @@
         />
 
         <SettingToggle
-          label="Keep App Running"
-          description="Don't close target app before reset/backup/restore operations (enable this to skip closing)"
+          label="Auto-Backup on Reset"
+          description="Automatically create backup before reset operations"
+          checked={$settings.autoBackup}
+          on:change={() => toggle('autoBackup')}
+        />
+
+        <SettingToggle
+          label="Skip Close App"
+          description="Don't close target app before reset/backup/restore operations (may cause file lock errors)"
           checked={$settings.skipCloseApp}
           on:change={() => toggle('skipCloseApp')}
         />
@@ -106,11 +208,26 @@
       
       <div class="space-y-3">
         <SettingToggle
-          label="Show Auto Backups"
+          label="Show Auto-Backups"
           description="Include auto-generated backups in session list by default"
           checked={$settings.showAutoBackups}
           on:change={() => toggle('showAutoBackups')}
         />
+
+        <div class="p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
+          <p class="font-medium mb-2 text-[var(--text-primary)]">Max Auto-Backups</p>
+          <p class="text-sm text-[var(--text-secondary)] mb-3">
+            Maximum number of auto-backups to keep per app (oldest will be deleted)
+          </p>
+          <input 
+            type="number" 
+            min="1" 
+            max="20" 
+            value={$settings.maxAutoBackups}
+            on:change={(e) => updateSetting('maxAutoBackups', parseInt(e.target.value) || 5)}
+            class="w-full bg-[var(--bg-hover)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
+          />
+        </div>
 
         <div class="p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
           <p class="font-medium mb-2 text-[var(--text-primary)]">Default Filter</p>
@@ -124,87 +241,52 @@
             <option value="active">Active Only</option>
           </select>
         </div>
-      </div>
 
-    {:else if activeSection === 'notes'}
-      <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">Notes</h2>
-      
-      <div class="space-y-3">
-        <SettingToggle
-          label="Auto Save"
-          description="Automatically save notes while typing"
-          checked={$settings.autoSaveNotes}
-          on:change={() => toggle('autoSaveNotes')}
-        />
-
-        <div class="p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
-          <p class="font-medium mb-2 text-[var(--text-primary)]">Auto Save Delay</p>
-          <p class="text-sm text-[var(--text-secondary)] mb-3">
-            Wait time before auto-saving (in seconds)
-          </p>
-          <input 
-            type="range" 
-            min="1" 
-            max="10" 
-            value={$settings.autoSaveDelay / 1000}
-            on:input={(e) => updateSetting('autoSaveDelay', parseInt(e.target.value) * 1000)}
-            class="w-full accent-[var(--primary)]"
-          />
-          <p class="text-sm text-center mt-2 text-[var(--text-secondary)]">{$settings.autoSaveDelay / 1000}s</p>
-        </div>
-      </div>
-
-    {:else if activeSection === 'advanced'}
-      <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">Advanced</h2>
-      
-      <div class="space-y-3">
-        <div class="p-4 bg-[var(--bg-card)] rounded-lg border border-[var(--border)]">
-          <p class="font-medium mb-2 text-[var(--text-primary)]">Log Retention</p>
-          <p class="text-sm text-[var(--text-secondary)] mb-3">
-            Maximum number of log entries to keep
-          </p>
-          <input 
-            type="number" 
-            min="10" 
-            max="1000" 
-            value={$settings.logRetention}
-            on:change={(e) => updateSetting('logRetention', parseInt(e.target.value))}
-            class="w-full bg-[var(--bg-hover)] border border-[var(--border)] rounded-lg px-3 py-2 text-[var(--text-primary)] focus:outline-none focus:border-[var(--primary)]"
-          />
-        </div>
-
-        <SettingToggle
-          label="Remember Last Tab"
-          description="Open last active tab on startup"
-          checked={$settings.rememberLastTab}
-          on:change={() => toggle('rememberLastTab')}
-        />
-
+        <!-- Open Backup Folder Button -->
         <button
-          class="w-full p-3 bg-[var(--danger)]/10 text-[var(--danger)] rounded-lg 
-            hover:bg-[var(--danger)]/20 transition-colors flex items-center justify-center gap-2 border border-[var(--danger)]/30"
-          on:click={() => { if(confirm('Reset all settings to default?')) settings.reset(); }}
+          class="w-full p-3 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] rounded-lg 
+            transition-colors flex items-center justify-center gap-2 border border-[var(--border)] text-[var(--text-primary)]"
+          on:click={handleOpenBackupFolder}
         >
-          <RotateCcw size={16} />
-          Reset All Settings
+          <FolderOpen size={16} />
+          Open Backup Folder
         </button>
       </div>
 
     {:else if activeSection === 'experimental'}
       <h2 class="text-lg font-semibold mb-4 text-[var(--text-primary)]">Experimental Features</h2>
       
-      <div class="p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/30 rounded-lg mb-4">
-        <p class="text-sm text-[var(--warning)]">
-          ⚠️ These features are experimental and may not work as expected. Use at your own risk.
-        </p>
+      <!-- Warning Banner -->
+      <div class="p-4 bg-[var(--warning)]/10 border border-[var(--warning)]/30 rounded-lg mb-4 flex items-start gap-3">
+        <AlertTriangle size={20} class="text-[var(--warning)] flex-shrink-0 mt-0.5" />
+        <div>
+          <p class="text-sm font-medium text-[var(--warning)]">Use at your own risk</p>
+          <p class="text-sm text-[var(--text-secondary)]">
+            These features are experimental and may not work as expected. They may be removed or changed in future versions.
+          </p>
+        </div>
       </div>
 
       <div class="space-y-3">
+        <SettingToggle
+          label="Show Restore Addon Only"
+          description="Enable 'Restore Addon Only' option in session context menu. Restores only addon folders (like .aws, .ssh) without touching main data."
+          checked={$settings.showRestoreAddonOnly}
+          on:change={() => toggle('showRestoreAddonOnly')}
+        />
+
         <SettingToggle
           label="Restore Account Only"
           description="Enable quick account switch in Sessions context menu. Only restores auth state (state.vscdb), preserving extensions and settings."
           checked={$settings.experimentalRestoreAccountOnly}
           on:change={() => toggle('experimentalRestoreAccountOnly')}
+        />
+
+        <SettingToggle
+          label="Debug Mode"
+          description="Show debug logs in browser console for troubleshooting"
+          checked={$settings.debugMode}
+          on:change={() => toggle('debugMode')}
         />
       </div>
     {/if}

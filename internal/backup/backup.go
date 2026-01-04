@@ -207,16 +207,15 @@ func (m *Manager) CreateBackup(appKey, sessionName string, sourcePath string, ba
 		progressCb(BackupProgress{Percent: 10, Message: "Starting backup..."})
 	}
 
-	// Backup items
+	// Backup items - only backup specific items if defined, otherwise skip data folder entirely
+	// This allows users to configure apps that only backup addon paths (like .aws)
 	if len(backupItems) > 0 {
 		if err := m.backupSpecificItems(sourcePath, backupFolder, backupItems, progressCb); err != nil {
 			return err
 		}
-	} else {
-		if err := m.backupAllItems(sourcePath, backupFolder, progressCb); err != nil {
-			return err
-		}
 	}
+	// NOTE: If backupItems is empty, we intentionally skip backing up the data folder
+	// The user has chosen to not backup any items from the main data folder
 
 	// Backup addon folders
 	if len(addonPaths) > 0 {
@@ -856,6 +855,51 @@ func (m *Manager) calculateDirSize(path string) (int64, error) {
 	})
 
 	return size, err
+}
+
+// RestoreAddonsOnly restores only the addon folders from a backup session
+func (m *Manager) RestoreAddonsOnly(appKey, sessionName string, addonPaths []string, progressCb ProgressCallback) error {
+	appKey = strings.ToLower(appKey)
+	backupFolder := m.GetSessionPath(appKey, sessionName)
+
+	// Check if backup exists
+	if _, err := os.Stat(backupFolder); os.IsNotExist(err) {
+		return fmt.Errorf("backup not found: %s", sessionName)
+	}
+
+	// Check if _addons folder exists
+	addonBackupDir := filepath.Join(backupFolder, "_addons")
+	if _, err := os.Stat(addonBackupDir); os.IsNotExist(err) {
+		return fmt.Errorf("no addon backups found in session: %s", sessionName)
+	}
+
+	if progressCb != nil {
+		progressCb(BackupProgress{Percent: 10, Message: "Restoring addon folders..."})
+	}
+
+	// Restore addon folders
+	if err := m.restoreAddons(backupFolder, addonPaths, progressCb); err != nil {
+		return fmt.Errorf("failed to restore addons: %w", err)
+	}
+
+	if progressCb != nil {
+		progressCb(BackupProgress{Percent: 100, Message: "Addon folders restored!"})
+	}
+
+	return nil
+}
+
+// SessionHasAddons checks if a session has _addons folder
+func (m *Manager) SessionHasAddons(appKey, sessionName string) bool {
+	appKey = strings.ToLower(appKey)
+	backupFolder := m.GetSessionPath(appKey, sessionName)
+	addonBackupDir := filepath.Join(backupFolder, "_addons")
+	
+	info, err := os.Stat(addonBackupDir)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
 }
 
 // FormatSize formats a byte size to human-readable string.

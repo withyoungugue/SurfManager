@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { Plus, RefreshCw, Search, CheckSquare, FolderOpen, Trash2 } from 'lucide-svelte';
-  import { GetActiveApps, GetAllSessions, CreateBackup, RestoreBackup, RestoreAccountOnly, DeleteSession, SetActiveSession, OpenSessionFolder, CountAutoBackups } from '../../wailsjs/go/main/App.js';
+  import { Plus, RefreshCw, Search, CheckSquare, FolderOpen, Trash2, RotateCcw, User, Package } from 'lucide-svelte';
+  import { GetActiveApps, GetApp, GetAllSessions, CreateBackup, RestoreBackup, RestoreAccountOnly, RestoreAddonOnly, CheckSessionHasAddons, DeleteSession, SetActiveSession, OpenSessionFolder, CountAutoBackups } from '../../wailsjs/go/main/App.js';
   import { confirm } from './ConfirmModal.svelte';
   import { settings } from './stores/settings.js';
 
@@ -21,7 +21,7 @@
   let newBackupName = '';
 
   // Context menu state
-  let contextMenu = { show: false, x: 0, y: 0, session: null };
+  let contextMenu = { show: false, x: 0, y: 0, session: null, canRestoreAddonOnly: false };
 
   onMount(() => {
     showAuto = $settings.showAutoBackups;
@@ -140,6 +140,54 @@
     }
   }
 
+  async function handleRestoreAddonOnly(session) {
+    // Get app config to show addon paths in confirmation
+    let appConfig;
+    try {
+      appConfig = await GetApp(session.app);
+    } catch (e) {
+      log(`Error getting app config: ${e}`);
+      return;
+    }
+
+    const addonPaths = appConfig?.addon_backup_paths || [];
+    const addonList = addonPaths.map(p => `• ${p}`).join('\n');
+
+    const confirmed = await confirm({
+      title: 'Restore Addon Folders Only',
+      message: `Restore addon folders from "${session.name}"?\n\nThis will restore:\n${addonList}\n\nMain data folder will NOT be touched.`,
+      confirmText: 'Restore Addons'
+    });
+    if (!confirmed) return;
+    
+    log(`Restoring addon folders from ${session.name}...`);
+    try {
+      await RestoreAddonOnly(session.app, session.name, $settings.skipCloseApp);
+      log(`Addon folders restored from: ${session.name}`);
+      await loadData();
+    } catch (e) {
+      log(`Error: ${e}`);
+      alert(`Error restoring addon folders: ${e}`);
+    }
+  }
+
+  // Check if session can show "Restore Addon Only" option
+  async function canShowRestoreAddonOnly(session) {
+    if (!$settings.showRestoreAddonOnly) return false;
+    
+    try {
+      // Check if app has addon_backup_paths configured
+      const appConfig = await GetApp(session.app);
+      if (!appConfig?.addon_backup_paths || appConfig.addon_backup_paths.length === 0) return false;
+      
+      // Check if session has _addons folder
+      const hasAddons = await CheckSessionHasAddons(session.app, session.name);
+      return hasAddons;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async function handleDelete(session) {
     if ($settings.confirmBeforeDelete) {
       const confirmed = await confirm.delete(session.name);
@@ -235,13 +283,21 @@
   }
 
   // Context menu
-  function handleContextMenu(event, session) {
+  async function handleContextMenu(event, session) {
     event.preventDefault();
+    
+    // Check if can show "Restore Addon Only" option
+    let canRestoreAddonOnly = false;
+    if ($settings.showRestoreAddonOnly) {
+      canRestoreAddonOnly = await canShowRestoreAddonOnly(session);
+    }
+    
     contextMenu = {
       show: true,
       x: event.clientX,
       y: event.clientY,
-      session
+      session,
+      canRestoreAddonOnly
     };
   }
 
@@ -417,39 +473,44 @@
     on:click|stopPropagation={closeContextMenu}
   >
     <button
-      class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)] transition-colors"
+      class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--primary)] transition-colors flex items-center gap-2"
       on:click={() => { handleRestore(contextMenu.session); closeContextMenu(); }}
     >
-      🔄 Restore Session
+      <RotateCcw size={14} />
+      Restore Session
     </button>
     {#if $settings.experimentalRestoreAccountOnly}
       <button
-        class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--warning)] transition-colors"
+        class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--warning)] transition-colors flex items-center gap-2"
         on:click={() => { handleRestoreAccountOnly(contextMenu.session); closeContextMenu(); }}
       >
-        👤 Restore Account Only
+        <User size={14} />
+        Restore Account Only
       </button>
     {/if}
-    {#if !contextMenu.session?.is_auto}
+    {#if contextMenu.canRestoreAddonOnly}
       <button
-        class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--success)] transition-colors"
-        on:click={() => { handleSetActive(contextMenu.session); closeContextMenu(); }}
+        class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--success)] transition-colors flex items-center gap-2"
+        on:click={() => { handleRestoreAddonOnly(contextMenu.session); closeContextMenu(); }}
       >
-        ✓ Set as Active
+        <Package size={14} />
+        Restore Addon Only
       </button>
     {/if}
     <button
-      class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+      class="w-full px-4 py-2 text-left text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2"
       on:click={() => { handleOpenFolder(contextMenu.session); closeContextMenu(); }}
     >
-      📁 Open Folder
+      <FolderOpen size={14} />
+      Open Folder
     </button>
     <div class="border-t border-[var(--border)] my-1"></div>
     <button
-      class="w-full px-4 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors"
+      class="w-full px-4 py-2 text-left text-sm text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors flex items-center gap-2"
       on:click={() => { handleDelete(contextMenu.session); closeContextMenu(); }}
     >
-      🗑️ Delete Session
+      <Trash2 size={14} />
+      Delete Session
     </button>
   </div>
 {/if}

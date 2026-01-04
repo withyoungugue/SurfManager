@@ -221,19 +221,32 @@ func (a *App) ResetApp(appKey string, autoBackup bool, skipClose bool) error {
 		}
 	}
 
-	// Delete data folder
-	wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
-		"percent": 50,
-		"message": fmt.Sprintf("Deleting %s data...", cfg.DisplayName),
-	})
+	// Only delete data folder if:
+	// 1. SkipDataFolder is false (default), AND
+	// 2. There are backup items configured (meaning user wants to manage this folder)
+	// If SkipDataFolder is true OR no backup items, skip resetting the data folder
+	shouldResetDataFolder := !cfg.SkipDataFolder && len(cfg.BackupItems) > 0
 
-	if err := os.RemoveAll(dataPath); err != nil {
-		return fmt.Errorf("failed to delete data: %w", err)
-	}
+	if shouldResetDataFolder {
+		// Delete data folder
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 50,
+			"message": fmt.Sprintf("Deleting %s data...", cfg.DisplayName),
+		})
 
-	// Recreate empty folder
-	if err := os.MkdirAll(dataPath, 0755); err != nil {
-		return fmt.Errorf("failed to recreate folder: %w", err)
+		if err := os.RemoveAll(dataPath); err != nil {
+			return fmt.Errorf("failed to delete data: %w", err)
+		}
+
+		// Recreate empty folder
+		if err := os.MkdirAll(dataPath, 0755); err != nil {
+			return fmt.Errorf("failed to recreate folder: %w", err)
+		}
+	} else {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 50,
+			"message": "Skipping data folder (no backup items configured)...",
+		})
 	}
 
 	// Delete addon folders if configured
@@ -421,6 +434,64 @@ func (a *App) KillApp(appKey string) error {
 	return a.process.SmartClose(cfg.DisplayName, processNames)
 }
 
+// ResetAddonData resets only the addon folders for an app
+func (a *App) ResetAddonData(appKey string, skipClose bool) error {
+	cfg := a.GetApp(appKey)
+	if cfg == nil {
+		return fmt.Errorf("app not found: %s", appKey)
+	}
+
+	if len(cfg.AddonPaths) == 0 {
+		return fmt.Errorf("no addon folders configured for %s", cfg.DisplayName)
+	}
+
+	// Get process names from exe paths
+	var processNames []string
+	for _, exePath := range cfg.Paths.ExePaths {
+		processNames = append(processNames, filepath.Base(exePath))
+	}
+
+	// Smart close the app (unless skipClose is true)
+	if !skipClose && len(processNames) > 0 {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 10,
+			"message": fmt.Sprintf("Closing %s...", cfg.DisplayName),
+		})
+		if err := a.process.SmartClose(cfg.DisplayName, processNames); err != nil {
+			return fmt.Errorf("failed to close %s: %w", cfg.DisplayName, err)
+		}
+	}
+
+	wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+		"percent": 30,
+		"message": "Deleting addon folders...",
+	})
+
+	deletedCount := 0
+	for i, addonPath := range cfg.AddonPaths {
+		if _, err := os.Stat(addonPath); err == nil {
+			if err := os.RemoveAll(addonPath); err != nil {
+				wailsRuntime.EventsEmit(a.ctx, "log", fmt.Sprintf("[ResetAddon] Failed to delete %s: %v", addonPath, err))
+			} else {
+				deletedCount++
+			}
+		}
+		// Progress update
+		progress := 30 + int(float64(i+1)/float64(len(cfg.AddonPaths))*60)
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": progress,
+			"message": fmt.Sprintf("Deleted: %s", filepath.Base(addonPath)),
+		})
+	}
+
+	wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+		"percent": 100,
+		"message": fmt.Sprintf("Reset complete! Deleted %d addon folder(s)", deletedCount),
+	})
+
+	return nil
+}
+
 // IsAppRunning checks if an app is currently running
 func (a *App) IsAppRunning(appKey string) bool {
 	cfg := a.GetApp(appKey)
@@ -492,13 +563,15 @@ func (a *App) CreateBackup(appKey, sessionName string, skipClose bool) error {
 		a.process.SmartClose(cfg.DisplayName, processNames)
 	}
 
-	// Convert backup items
+	// Convert backup items (only if not skipping data folder)
 	var backupItems []backup.BackupItem
-	for _, item := range cfg.BackupItems {
-		backupItems = append(backupItems, backup.BackupItem{
-			Path:     item.Path,
-			Optional: item.Optional,
-		})
+	if !cfg.SkipDataFolder {
+		for _, item := range cfg.BackupItems {
+			backupItems = append(backupItems, backup.BackupItem{
+				Path:     item.Path,
+				Optional: item.Optional,
+			})
+		}
 	}
 
 	// Create backup
@@ -892,6 +965,69 @@ func (a *App) OpenBackupFolder() error {
 // FormatSize formats bytes to human readable string
 func (a *App) FormatSize(bytes int64) string {
 	return backup.FormatSize(bytes)
+}
+
+// RestoreAddonOnly restores only the addon folders from a backup session
+func (a *App) RestoreAddonOnly(appKey, sessionName string, skipClose bool) error {
+	cfg := a.GetApp(appKey)
+	if cfg == nil {
+		return fmt.Errorf("app not found: %s", appKey)
+	}
+
+	if len(cfg.AddonPaths) == 0 {
+		return fmt.Errorf("no addon paths configured for %s", cfg.DisplayName)
+	}
+
+	// Check if session has _addons folder
+	if !a.CheckSessionHasAddons(appKey, sessionName) {
+		return fmt.Errorf("session '%s' does not have addon backups", sessionName)
+	}
+
+	// Get process names from exe paths
+	var processNames []string
+	for _, exePath := range cfg.Paths.ExePaths {
+		processNames = append(processNames, filepath.Base(exePath))
+	}
+
+	// Smart close the app (unless skipClose is true)
+	if !skipClose && len(processNames) > 0 {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 5,
+			"message": fmt.Sprintf("Closing %s...", cfg.DisplayName),
+		})
+		if err := a.process.SmartClose(cfg.DisplayName, processNames); err != nil {
+			return fmt.Errorf("failed to close %s: %w", cfg.DisplayName, err)
+		}
+	}
+
+	wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+		"percent": 20,
+		"message": "Restoring addon folders...",
+	})
+
+	// Restore only addons from backup
+	err := a.backup.RestoreAddonsOnly(appKey, sessionName, cfg.AddonPaths, func(p backup.BackupProgress) {
+		wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+			"percent": 20 + int(float64(p.Percent)*0.8),
+			"message": p.Message,
+		})
+	})
+
+	if err != nil {
+		return err
+	}
+
+	wailsRuntime.EventsEmit(a.ctx, "progress", map[string]interface{}{
+		"percent": 100,
+		"message": "Addon folders restored!",
+	})
+
+	return nil
+}
+
+// CheckSessionHasAddons checks if a session has _addons folder
+func (a *App) CheckSessionHasAddons(appKey, sessionName string) bool {
+	return a.backup.SessionHasAddons(appKey, sessionName)
 }
 
 // generateUUID generates a simple UUID

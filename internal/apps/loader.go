@@ -15,14 +15,15 @@ import (
 
 // AppConfig represents the configuration for an application.
 type AppConfig struct {
-	AppName     string       `json:"app_name"`
-	DisplayName string       `json:"display_name"`
-	Version     string       `json:"version"`
-	Active      bool         `json:"active"`
-	Description string       `json:"description"`
-	Paths       AppPaths     `json:"paths"`
-	BackupItems []BackupItem `json:"backup_items"`
-	AddonPaths  []string     `json:"addon_backup_paths"`
+	AppName        string       `json:"app_name"`
+	DisplayName    string       `json:"display_name"`
+	Version        string       `json:"version"`
+	Active         bool         `json:"active"`
+	Description    string       `json:"description"`
+	Paths          AppPaths     `json:"paths"`
+	BackupItems    []BackupItem `json:"backup_items"`
+	AddonPaths     []string     `json:"addon_backup_paths"`
+	SkipDataFolder bool         `json:"skip_data_folder,omitempty"` // Skip data folder in backup/reset (only use addon paths)
 }
 
 // AppPaths contains the various paths associated with an application.

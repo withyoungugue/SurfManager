@@ -6,6 +6,10 @@ export function CheckAppInstalled(arg1) {
   return window['go']['main']['App']['CheckAppInstalled'](arg1);
 }
 
+export function CheckSessionHasAddons(arg1, arg2) {
+  return window['go']['main']['App']['CheckSessionHasAddons'](arg1, arg2);
+}
+
 export function CountAutoBackups() {
   return window['go']['main']['App']['CountAutoBackups']();
 }
@@ -122,12 +126,20 @@ export function RenameSession(arg1, arg2, arg3) {
   return window['go']['main']['App']['RenameSession'](arg1, arg2, arg3);
 }
 
+export function ResetAddonData(arg1, arg2) {
+  return window['go']['main']['App']['ResetAddonData'](arg1, arg2);
+}
+
 export function ResetApp(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResetApp'](arg1, arg2, arg3);
 }
 
 export function RestoreAccountOnly(arg1, arg2) {
   return window['go']['main']['App']['RestoreAccountOnly'](arg1, arg2);
+}
+
+export function RestoreAddonOnly(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RestoreAddonOnly'](arg1, arg2, arg3);
 }
 
 export function RestoreBackup(arg1, arg2, arg3) {

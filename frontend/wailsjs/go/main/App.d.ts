@@ -6,6 +6,8 @@ import {main} from '../models';
 
 export function CheckAppInstalled(arg1:string):Promise<boolean>;
 
+export function CheckSessionHasAddons(arg1:string,arg2:string):Promise<boolean>;
+
 export function CountAutoBackups():Promise<number>;
 
 export function CreateBackup(arg1:string,arg2:string,arg3:boolean):Promise<void>;
@@ -64,9 +66,13 @@ export function ReloadApps():Promise<void>;
 
 export function RenameSession(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function ResetAddonData(arg1:string,arg2:boolean):Promise<void>;
+
 export function ResetApp(arg1:string,arg2:boolean,arg3:boolean):Promise<void>;
 
 export function RestoreAccountOnly(arg1:string,arg2:string):Promise<void>;
+
+export function RestoreAddonOnly(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 
 export function RestoreBackup(arg1:string,arg2:string,arg3:boolean):Promise<void>;
 

@@ -2,6 +2,67 @@
 
 All notable changes to SurfManager will be documented in this file.
 
+## [2.0.2] - 2026-01-04
+
+### ✨ New Features
+
+**Settings Revamp**
+- Restructured settings into 4 clear categories: General, Behavior, Sessions, Experimental
+- Added Import/Export Settings - backup and restore your SurfManager configuration as JSON
+- Added Reset All Settings button to restore defaults
+- Moved experimental features to dedicated Experimental section with warning banner
+
+**Restore Addon Only (Experimental)**
+- New context menu option in Sessions tab to restore ONLY addon folders (like .aws, .ssh)
+- Restores addon folders without touching main app data
+- Must be enabled in Settings > Experimental > "Show Restore Addon Only"
+- Only appears when app has addon paths configured and session has _addons folder
+- Perfect for restoring credentials without affecting app settings
+
+**Reset Tab Enhancements**
+- Added "Reset Addon Data" button - delete only addon folders without touching main data
+- Added "Kill App" button - force close running apps
+- Button layout now uses 2 rows with 3 columns for better organization
+- Addon button only appears for apps with configured addon paths
+- Kill button only enabled when app is running
+
+**Skip Data Folder Feature**
+- New toggle in Config tab for Custom apps: "Skip Data Folder"
+- Allows apps to backup/restore ONLY addon folders, skipping main data folder entirely
+- Useful for apps where you only want to manage external folders (credentials, configs)
+
+### 🔧 Fixes & Improvements
+
+**UI/UX**
+- Fixed toggle switch inconsistency - all toggles now have uniform appearance
+- Replaced emoji icons with Lucide icons in context menus for consistency
+- Removed "Set as Active" from session context menu (redundant feature)
+- Stats section in Reset tab now shows addon folder count when applicable
+- Removed placeholder "Last Reset" stat (not implemented)
+
+**Bug Fixes**
+- Fixed backup logic: empty BackupItems now correctly skips data folder instead of backing up everything
+- Fixed reset logic: respects SkipDataFolder flag and BackupItems configuration
+- Fixed field name mismatch: `addon_paths` → `addon_backup_paths` in frontend
+- Fixed toggle component using inline styles for reliable positioning
+
+### 📝 Technical Changes
+
+**Backend**
+- Added `RestoreAddonOnly()` function in app.go
+- Added `CheckSessionHasAddons()` function in app.go
+- Added `RestoreAddonsOnly()` method in backup.go
+- Added `SessionHasAddons()` method in backup.go
+- Added `SkipDataFolder` field to AppConfig struct
+
+**Frontend**
+- Complete SettingsTab.svelte revamp with new structure
+- Enhanced SessionsTab.svelte with new context menu options
+- Updated settings store with export/import/reset functions
+- Fixed SettingToggle.svelte component for consistent behavior
+
+---
+
 ## [2.0.1] - 2026-01-03
 
 ### 🔧 Fixes & Improvements

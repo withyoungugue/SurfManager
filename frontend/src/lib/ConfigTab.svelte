@@ -26,7 +26,8 @@
     data_path: '',
     app_type: 'vscode', // 'vscode' or 'custom'
     backup_items: [],
-    addon_paths: []
+    addon_paths: [],
+    skip_data_folder: false // Skip data folder in backup/reset
   };
 
   // VSCode preset backup items
@@ -192,9 +193,11 @@
     if (type === 'vscode') {
       // Reset to preset items
       newApp.backup_items = vscodePresetItems.map(item => ({ ...item }));
+      newApp.skip_data_folder = false; // VSCode preset always manages data folder
     } else {
       // Custom: clear all items, nothing selected by default
       newApp.backup_items = [];
+      // Keep skip_data_folder as is (user can toggle)
     }
   }
 
@@ -216,6 +219,7 @@
     newApp.exe_path = fullConfig.paths?.exe_paths?.[0] || '';
     newApp.data_path = fullConfig.paths?.data_paths?.[0] || '';
     newApp.addon_paths = fullConfig.addon_backup_paths || [];
+    newApp.skip_data_folder = fullConfig.skip_data_folder || false;
     
     // Determine app type and populate backup items
     const existingItems = fullConfig.backup_items || [];
@@ -322,7 +326,8 @@
         reset_folder: newApp.data_path
       },
       backup_items: enabledItems,
-      addon_backup_paths: newApp.addon_paths
+      addon_backup_paths: newApp.addon_paths,
+      skip_data_folder: newApp.skip_data_folder
     };
 
     try {
@@ -344,7 +349,8 @@
       data_path: '',
       app_type: 'vscode',
       backup_items: vscodePresetItems.map(item => ({ ...item })),
-      addon_paths: []
+      addon_paths: [],
+      skip_data_folder: false
     };
     customItemPath = '';
     customItemDesc = '';
@@ -665,6 +671,29 @@
               + Add Folder
             </button>
           </div>
+
+          <!-- Skip Data Folder Toggle (Custom only) -->
+          {#if newApp.app_type === 'custom'}
+            <div class="p-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)]">
+              <div class="flex items-center justify-between">
+                <div>
+                  <label class="text-sm font-medium text-[var(--text-primary)]">Skip Data Folder</label>
+                  <p class="text-xs text-[var(--text-muted)] mt-0.5">Only backup/reset Additional Folders</p>
+                </div>
+                <button
+                  class="w-10 h-5 rounded-full transition-all relative
+                         {newApp.skip_data_folder ? 'bg-[var(--primary)]' : 'bg-[var(--bg-hover)] border border-[var(--border)]'}"
+                  on:click={() => newApp.skip_data_folder = !newApp.skip_data_folder}
+                >
+                  <div class="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all
+                              {newApp.skip_data_folder ? 'left-5' : 'left-0.5'}"></div>
+                </button>
+              </div>
+              {#if newApp.skip_data_folder}
+                <p class="text-xs text-[var(--warning)] mt-2">⚠️ Data folder will NOT be backed up or reset</p>
+              {/if}
+            </div>
+          {/if}
         </div>
 
         <!-- Right Column: Backup Items -->

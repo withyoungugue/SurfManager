@@ -1,33 +1,37 @@
 // Settings store with localStorage persistence
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 
 const STORAGE_KEY = 'surfmanager-settings';
+const SETTINGS_VERSION = '2.0.2';
 
 const defaultSettings = {
-  // Appearance
+  // General
   theme: 'dark',
+  rememberLastTab: true,
+  lastActiveTab: 'reset',
   
   // Behavior
-  autoBackup: true,
   confirmBeforeReset: true,
   confirmBeforeDelete: true,
   confirmBeforeRestore: true,
-  skipCloseApp: false, // Don't close app before reset/backup/restore
+  autoBackup: true,
+  skipCloseApp: false,
   
   // Sessions
   showAutoBackups: false,
   defaultSessionFilter: 'all',
+  maxAutoBackups: 5,
   
-  // Notes
+  // Notes (legacy, kept for compatibility)
   autoSaveNotes: false,
   autoSaveDelay: 3000,
   
-  // Advanced
+  // Advanced (legacy, kept for compatibility)
   logRetention: 100,
-  rememberLastTab: true,
-  lastActiveTab: 'reset',
   
   // Experimental Features
+  showRestoreAddonOnly: false,
+  debugMode: false,
   experimentalRestoreAccountOnly: false, // Quick account switch (restore only state.vscdb)
 };
 
@@ -69,9 +73,107 @@ function createSettingsStore() {
       set(defaultSettings);
     },
     get: (key) => {
-      let current;
+      let current = defaultSettings;
       subscribe(s => current = s)();
       return current[key];
+    },
+    
+    // Export settings to JSON string
+    exportSettings: () => {
+      const currentSettings = get({ subscribe });
+      const exportData = {
+        version: SETTINGS_VERSION,
+        exported_at: new Date().toISOString(),
+        settings: {
+          // General
+          theme: currentSettings.theme,
+          rememberLastTab: currentSettings.rememberLastTab,
+          
+          // Behavior
+          confirmBeforeReset: currentSettings.confirmBeforeReset,
+          confirmBeforeDelete: currentSettings.confirmBeforeDelete,
+          confirmBeforeRestore: currentSettings.confirmBeforeRestore,
+          autoBackup: currentSettings.autoBackup,
+          skipCloseApp: currentSettings.skipCloseApp,
+          
+          // Sessions
+          showAutoBackups: currentSettings.showAutoBackups,
+          defaultSessionFilter: currentSettings.defaultSessionFilter,
+          maxAutoBackups: currentSettings.maxAutoBackups,
+          
+          // Notes
+          autoSaveNotes: currentSettings.autoSaveNotes,
+          autoSaveDelay: currentSettings.autoSaveDelay,
+          
+          // Advanced
+          logRetention: currentSettings.logRetention,
+          
+          // Experimental
+          showRestoreAddonOnly: currentSettings.showRestoreAddonOnly,
+          debugMode: currentSettings.debugMode,
+          experimentalRestoreAccountOnly: currentSettings.experimentalRestoreAccountOnly,
+        }
+      };
+      return JSON.stringify(exportData, null, 2);
+    },
+    
+    // Import settings from JSON string
+    importSettings: (jsonString) => {
+      try {
+        const importData = JSON.parse(jsonString);
+        
+        // Validate structure
+        if (!importData.settings || typeof importData.settings !== 'object') {
+          throw new Error('Invalid settings format: missing settings object');
+        }
+        
+        // Merge with defaults (to handle missing fields)
+        const newSettings = { ...defaultSettings };
+        
+        // Import only known settings
+        const validKeys = Object.keys(defaultSettings);
+        for (const key of validKeys) {
+          if (importData.settings.hasOwnProperty(key)) {
+            const value = importData.settings[key];
+            // Type validation
+            if (typeof value === typeof defaultSettings[key]) {
+              newSettings[key] = value;
+            }
+          }
+        }
+        
+        // Preserve lastActiveTab from current settings
+        const currentSettings = get({ subscribe });
+        newSettings.lastActiveTab = currentSettings.lastActiveTab;
+        
+        // Save and apply
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings));
+        }
+        set(newSettings);
+        
+        return { success: true, message: 'Settings imported successfully' };
+      } catch (e) {
+        return { success: false, message: `Import failed: ${e.message}` };
+      }
+    },
+    
+    // Reset all settings to defaults
+    resetSettings: () => {
+      const currentSettings = get({ subscribe });
+      const resetData = { ...defaultSettings };
+      // Preserve lastActiveTab
+      resetData.lastActiveTab = currentSettings.lastActiveTab;
+      
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(resetData));
+      }
+      set(resetData);
+    },
+    
+    // Get default settings (for preview)
+    getDefaults: () => {
+      return { ...defaultSettings };
     }
   };
 }
